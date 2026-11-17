@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 import 'package:quick_ride_backend/quick_ride_backend.dart';
 import 'package:quick_ride_notifications/quick_ride_notifications.dart';
@@ -74,7 +75,9 @@ class QuickRideAuth {
         provider: OAuthProvider.google,
         idToken: idToken,
       );
-    } catch (_) {
+    } catch (error, stack) {
+      debugPrint('Quick Ride Google sign-in failed (${error.runtimeType}): $error');
+      debugPrintStack(stackTrace: stack);
       _googleInitialization = null;
       rethrow;
     }
