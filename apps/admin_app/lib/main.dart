@@ -63,7 +63,8 @@ class _QuickRideAdminBootstrapState extends State<QuickRideAdminBootstrap> {
       await QuickRideNotifications.initialize(appRole: 'admin');
 
       await _openedSubscription?.cancel();
-      _openedSubscription = QuickRideNotifications.openedMessages.listen((_) {
+      _openedSubscription = QuickRideNotifications.openedMessages.listen((message) {
+        unawaited(QuickRideNotifications.recordMessage(message));
         WidgetsBinding.instance.addPostFrameCallback((_) {
           QuickRideAdminApp.router.go('/operations');
         });
@@ -72,6 +73,7 @@ class _QuickRideAdminBootstrapState extends State<QuickRideAdminBootstrap> {
       await _foregroundSubscription?.cancel();
       _foregroundSubscription =
           QuickRideNotifications.foregroundMessages.listen((message) {
+        unawaited(QuickRideNotifications.recordMessage(message));
         final notification = message.notification;
         if (notification == null) return;
         QuickRideAdminApp.messengerKey.currentState?.showSnackBar(
@@ -90,6 +92,7 @@ class _QuickRideAdminBootstrapState extends State<QuickRideAdminBootstrap> {
 
       final initial = await QuickRideNotifications.consumeInitialMessage();
       if (initial != null) {
+        unawaited(QuickRideNotifications.recordMessage(initial));
         WidgetsBinding.instance.addPostFrameCallback((_) {
           QuickRideAdminApp.router.go('/operations');
         });
