@@ -292,17 +292,6 @@ class _CustomerProfileScreenState extends State<CustomerProfileScreen> {
                   'अन्य भुगतान विकल्प उपलब्ध होने पर यहां दिखाई देंगे।',
                 )),
               ),
-              const Divider(),
-              ListTile(
-                contentPadding: EdgeInsets.zero,
-                leading: const Icon(Icons.receipt_long_outlined),
-                title: Text(_t('Fare history', 'किराया इतिहास')),
-                trailing: const Icon(Icons.chevron_right),
-                onTap: () {
-                  Navigator.of(sheetContext).pop();
-                  _showFareHistory();
-                },
-              ),
             ],
           ),
         ),
