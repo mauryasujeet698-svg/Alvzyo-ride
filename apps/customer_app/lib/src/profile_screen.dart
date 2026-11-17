@@ -318,8 +318,23 @@ class _CustomerProfileScreenState extends State<CustomerProfileScreen> {
     }
   }
 
+  static const bool _playStoreListingPublished = false;
+  static const String _playStoreListingUrl =
+      'https://play.google.com/store/apps/details?id=com.quickride.customer';
+
   Future<void> _checkForUpdates() async {
-    final uri = Uri.parse('https://play.google.com/store/apps/details?id=com.quickride.customer');
+    if (!_playStoreListingPublished) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(_t(
+            'Google Play updates will be available after Quick Ride is published.',
+            'Quick Ride प्रकाशित होने के बाद Google Play अपडेट उपलब्ध होंगे।',
+          )),
+        ),
+      );
+      return;
+    }
+    final uri = Uri.parse(_playStoreListingUrl);
     try {
       final opened = await launchUrl(uri, mode: LaunchMode.externalApplication);
       if (!opened && mounted) {
