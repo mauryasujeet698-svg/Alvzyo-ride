@@ -78,6 +78,7 @@ class _QuickRideCustomerBootstrapState extends State<QuickRideCustomerBootstrap>
   }
 
   void _handleOpenedMessage(dynamic message) {
+    unawaited(QuickRideNotifications.recordMessage(message));
     final data = message.data;
     final rideId = data['ride_id'];
     if (rideId is String && rideId.isNotEmpty) {
@@ -88,6 +89,7 @@ class _QuickRideCustomerBootstrapState extends State<QuickRideCustomerBootstrap>
   }
 
   void _handleForegroundMessage(dynamic message) {
+    unawaited(QuickRideNotifications.recordMessage(message));
     final notification = message.notification;
     if (notification == null) return;
     final rideId = message.data['ride_id'];
@@ -231,6 +233,7 @@ class QuickRideCustomerApp extends StatelessWidget {
         ),
       ),
       GoRoute(path: '/settings', builder: (_, __) => const CustomerSettingsScreen()),
+      GoRoute(path: '/notifications', builder: (_, __) => const CustomerNotificationsScreen()),
       GoRoute(
         path: '/privacy-policy',
         builder: (_, __) => const CustomerInformationScreen(page: 'privacy'),
