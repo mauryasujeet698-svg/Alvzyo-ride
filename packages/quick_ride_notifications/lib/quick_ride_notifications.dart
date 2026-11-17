@@ -1,9 +1,11 @@
 import 'dart:async';
+import 'dart:convert';
 
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/foundation.dart';
 import 'package:quick_ride_backend/quick_ride_backend.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 @pragma('vm:entry-point')
@@ -32,6 +34,9 @@ class QuickRideNotifications {
   QuickRideNotifications._();
 
   static bool _initialized = false;
+  static bool _inboxLoaded = false;
+  static final ValueNotifier<List<Map<String, dynamic>>> inbox =
+      ValueNotifier<List<Map<String, dynamic>>>(const []);
   static String? _appRole;
   static FirebaseMessaging? _messaging;
   static StreamSubscription<AuthState>? _authSubscription;
@@ -53,6 +58,7 @@ class QuickRideNotifications {
     if (!const {'customer', 'driver', 'admin'}.contains(appRole)) {
       throw ArgumentError.value(appRole, 'appRole', 'Unsupported Quick-Ride app role');
     }
+    await _loadInbox();
     if (_initialized) return true;
     if (!QuickRideBackend.isInitialized) return false;
 
@@ -139,6 +145,67 @@ class QuickRideNotifications {
       provisional: false,
     );
     return settings.authorizationStatus.name;
+  }
+
+  static Future<void> _loadInbox() async {
+    if (_inboxLoaded) return;
+    final prefs = await SharedPreferences.getInstance();
+    final values = prefs.getStringList('quick_ride_notification_inbox') ?? const [];
+    final messages = <Map<String, dynamic>>[];
+    for (final value in values) {
+      try {
+        final decoded = jsonDecode(value);
+        if (decoded is Map) messages.add(Map<String, dynamic>.from(decoded));
+      } catch (_) {
+        // Ignore one damaged local entry without losing the rest of the inbox.
+      }
+    }
+    inbox.value = messages.take(50).toList(growable: false);
+    _inboxLoaded = true;
+  }
+
+  static Future<void> _saveInbox() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setStringList(
+      'quick_ride_notification_inbox',
+      inbox.value.map(jsonEncode).toList(growable: false),
+    );
+  }
+
+  static Future<void> recordMessage(RemoteMessage message) async {
+    await _loadInbox();
+    final id = message.messageId ??
+        '${message.sentTime?.millisecondsSinceEpoch ?? DateTime.now().millisecondsSinceEpoch}-${message.hashCode}';
+    final data = Map<String, dynamic>.from(message.data);
+    final entry = <String, dynamic>{
+      'id': id,
+      'title': message.notification?.title ?? 'Quick Ride',
+      'body': message.notification?.body ?? 'You have an update.',
+      'data': data,
+      'received_at': DateTime.now().toIso8601String(),
+      'is_read': false,
+    };
+    inbox.value = [
+      entry,
+      ...inbox.value.where((item) => item['id'] != id),
+    ].take(50).toList(growable: false);
+    await _saveInbox();
+  }
+
+  static Future<void> markRead(String id) async {
+    await _loadInbox();
+    inbox.value = inbox.value
+        .map((item) => item['id'] == id
+            ? <String, dynamic>{...item, 'is_read': true}
+            : item)
+        .toList(growable: false);
+    await _saveInbox();
+  }
+
+  static Future<void> clearInbox() async {
+    inbox.value = const [];
+    _inboxLoaded = true;
+    await _saveInbox();
   }
 
   static Future<RemoteMessage?> consumeInitialMessage() async {
