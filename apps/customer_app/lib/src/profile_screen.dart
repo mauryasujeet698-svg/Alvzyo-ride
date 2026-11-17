@@ -148,65 +148,6 @@ class _CustomerProfileScreenState extends State<CustomerProfileScreen> {
     }
   }
 
-  Future<void> _openSafetyCentre() async {
-    final user = QuickRideAuth.currentUser;
-    if (user == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(_t(
-            'Sign in to access ride safety tools.',
-            'राइड सुरक्षा सुविधाओं के लिए साइन इन करें।',
-          )),
-        ),
-      );
-      return;
-    }
-    try {
-      final rows = await QuickRideBackend.client
-          .from('rides')
-          .select('id,status,created_at')
-          .eq('customer_id', user.id)
-          .inFilter('status', const [
-            'requested',
-            'searching',
-            'offered',
-            'accepted',
-            'driver_arriving',
-            'arrived',
-            'in_progress',
-          ])
-          .order('created_at', ascending: false)
-          .limit(1);
-      if (!mounted) return;
-      if (rows.isEmpty) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(_t(
-              'Trip sharing and SOS are available while a ride is active.',
-              'ट्रिप शेयरिंग और SOS सक्रिय राइड के दौरान उपलब्ध हैं।',
-            )),
-          ),
-        );
-        return;
-      }
-      final rideId = rows.first['id']?.toString();
-      if (rideId == null || rideId.isEmpty) {
-        throw StateError('The active ride could not be identified.');
-      }
-      context.go('/ride/$rideId');
-    } catch (error) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(_t(
-              'Safety tools could not be opened. Please try again.',
-              'सुरक्षा सुविधाएं नहीं खुल सकीं। कृपया फिर प्रयास करें।',
-            )),
-          ),
-        );
-      }
-    }
-  }
 
   Future<void> _showSavedPlaces() async {
     await showModalBottomSheet<void>(
@@ -274,6 +215,385 @@ class _CustomerProfileScreenState extends State<CustomerProfileScreen> {
       ),
     );
   }
+
+
+  Widget _profileOption({
+    required IconData icon,
+    required String title,
+    required String subtitle,
+    required VoidCallback onTap,
+    bool destructive = false,
+  }) {
+    final colors = Theme.of(context).colorScheme;
+    return Card(
+      margin: const EdgeInsets.only(bottom: 12),
+      clipBehavior: Clip.antiAlias,
+      child: ListTile(
+        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+        minVerticalPadding: 10,
+        leading: Container(
+          width: 54,
+          height: 54,
+          decoration: BoxDecoration(
+            color: destructive ? colors.errorContainer : colors.primaryContainer,
+            borderRadius: BorderRadius.circular(16),
+          ),
+          child: Icon(icon, color: destructive ? colors.onErrorContainer : colors.onPrimaryContainer),
+        ),
+        title: Text(
+          title,
+          style: TextStyle(
+            fontWeight: FontWeight.w700,
+            color: destructive ? colors.error : colors.onSurface,
+          ),
+        ),
+        subtitle: Text(subtitle, maxLines: 2, overflow: TextOverflow.ellipsis),
+        trailing: Icon(
+          Icons.chevron_right_rounded,
+          color: destructive ? colors.error : colors.onSurfaceVariant,
+        ),
+        onTap: onTap,
+      ),
+    );
+  }
+
+
+  Future<void> _showPayments() async {
+    await showModalBottomSheet<void>(
+      context: context,
+      showDragHandle: true,
+      builder: (sheetContext) => SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(20, 8, 20, 24),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                _t('Payments', 'भुगतान'),
+                style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w800),
+              ),
+              const SizedBox(height: 12),
+              ListTile(
+                contentPadding: EdgeInsets.zero,
+                leading: const Icon(Icons.payments_outlined),
+                title: Text(_t('Cash payment', 'नकद भुगतान')),
+                subtitle: Text(_t(
+                  'Cash is available when offered for an eligible ride.',
+                  'पात्र राइड के लिए उपलब्ध होने पर नकद भुगतान किया जा सकता है।',
+                )),
+              ),
+              ListTile(
+                contentPadding: EdgeInsets.zero,
+                leading: const Icon(Icons.credit_card_outlined),
+                title: Text(_t('Digital payments', 'डिजिटल भुगतान')),
+                subtitle: Text(_t(
+                  'Additional payment methods will appear here when enabled.',
+                  'अन्य भुगतान विकल्प उपलब्ध होने पर यहां दिखाई देंगे।',
+                )),
+              ),
+              const Divider(),
+              ListTile(
+                contentPadding: EdgeInsets.zero,
+                leading: const Icon(Icons.receipt_long_outlined),
+                title: Text(_t('Fare history', 'किराया इतिहास')),
+                trailing: const Icon(Icons.chevron_right),
+                onTap: () {
+                  Navigator.of(sheetContext).pop();
+                  _showFareHistory();
+                },
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Future<void> _showNotificationsInfo() async {
+    context.push('/settings');
+    return;
+    await showDialog<void>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: Text(_t('Notifications', 'सूचनाएं')),
+        content: Text(_t(
+          'Quick Ride uses notifications for ride requests, driver updates and safety messages. You can manage notification permission from your Android app settings.',
+          'Quick Ride राइड अनुरोध, ड्राइवर अपडेट और सुरक्षा संदेशों के लिए सूचनाओं का उपयोग करता है। आप Android ऐप सेटिंग में सूचना अनुमति बदल सकते हैं।',
+        )),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(),
+            child: Text(_t('Got it', 'समझ गया')),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _shareApp() async {
+    try {
+      await SharePlus.instance.share(
+        ShareParams(
+          text: _t(
+            'Try Quick Ride for local rides and easy trip booking.',
+            'स्थानीय राइड और आसान ट्रिप बुकिंग के लिए Quick Ride आज़माएं।',
+          ),
+        ),
+      );
+    } catch (error) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(_t('Could not open the share menu. Please try again.', 'शेयर मेन्यू नहीं खुल सका। कृपया फिर प्रयास करें।'))),
+        );
+      }
+    }
+  }
+
+  Future<void> _checkForUpdates() async {
+    final uri = Uri.parse('https://play.google.com/store/apps/details?id=com.quickride.customer');
+    try {
+      final opened = await launchUrl(uri, mode: LaunchMode.externalApplication);
+      if (!opened && mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(_t('Quick Ride is not yet published on Google Play. Please check again after launch.', 'Quick Ride अभी Google Play पर प्रकाशित नहीं हुआ है। लॉन्च के बाद फिर देखें।'))),
+        );
+      }
+    } catch (error) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(_t('Could not check for updates. Please try again.', 'अपडेट नहीं देख सके। कृपया फिर प्रयास करें।'))),
+        );
+      }
+    }
+  }
+
+  Future<void> _confirmSignOut() async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: Text(_t('Sign out of Quick Ride?', 'Quick Ride से साइन आउट करें?')),
+        content: Text(_t(
+          'You will be signed out on this device. Your account and ride records will remain available when you sign in again. Signing out does not cancel an active ride.',
+          'इस डिवाइस पर आपका साइन-इन समाप्त हो जाएगा। दोबारा साइन-इन करने पर आपका खाता और राइड रिकॉर्ड उपलब्ध रहेंगे। साइन आउट करने से सक्रिय राइड रद्द नहीं होगी।',
+        )),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(false),
+            child: Text(_t('Cancel', 'रद्द करें')),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.of(dialogContext).pop(true),
+            child: Text(_t('Sign out', 'साइन आउट')),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true || !mounted) return;
+    try {
+      await QuickRideAuth.signOut();
+      if (mounted) context.go('/');
+    } catch (error) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(_t('Could not sign out. Please try again.', 'साइन आउट नहीं हो सका। कृपया फिर प्रयास करें।'))),
+        );
+      }
+    }
+  }
+
+
+  @override
+  Widget build(BuildContext context) {
+    final user = QuickRideAuth.currentUser;
+    return Scaffold(
+      appBar: AppBar(title: Text(_t('Profile', 'प्रोफ़ाइल'))),
+      body: ListView(
+        padding: const EdgeInsets.fromLTRB(16, 16, 16, 24),
+        children: [
+          if (user == null)
+            Padding(
+              padding: const EdgeInsets.only(bottom: 14),
+              child: SizedBox(
+                width: double.infinity,
+                child: FilledButton.icon(
+                  style: FilledButton.styleFrom(
+                    minimumSize: const Size.fromHeight(56),
+                    shape: const StadiumBorder(),
+                  ),
+                  onPressed: QuickRideBackend.isInitialized
+                      ? () async {
+                          try {
+                            await QuickRideAuth.signInWithGoogle(
+                              redirectTo: 'in.quickride.customer://login-callback',
+                            );
+                          } catch (error) {
+                            final details = error.toString();
+                            final safeDetails = details.length > 140
+                                ? details.substring(0, 140)
+                                : details;
+                            debugPrint('Quick Ride Google sign-in failed (${error.runtimeType}): $safeDetails');
+                            if (context.mounted) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(content: Text('Google sign-in failed: $safeDetails')),
+                              );
+                            }
+                          }
+                        }
+                      : null,
+                  icon: const Icon(Icons.login_rounded),
+                  label: Text(_t('Sign in / Create account', 'साइन इन / खाता बनाएं')),
+                ),
+              ),
+            )
+          else
+            _profileOption(
+              icon: Icons.person_outline_rounded,
+              title: _t('Personal details', 'व्यक्तिगत जानकारी'),
+              subtitle: user.email ?? _t('Manage your account details', 'अपने खाते की जानकारी प्रबंधित करें'),
+              onTap: _editPersonalDetails,
+            ),
+          _profileOption(
+            icon: Icons.bookmark_border_rounded,
+            title: _t('Saved addresses', 'सेव किए गए पते'),
+            subtitle: _t('Home, work and other saved locations', 'घर, काम और अन्य सेव किए गए स्थान'),
+            onTap: _showSavedPlaces,
+          ),
+          _profileOption(
+            icon: Icons.account_balance_wallet_outlined,
+            title: _t('Payments', 'भुगतान'),
+            subtitle: _t('Payment options and fare records', 'भुगतान विकल्प और किराया रिकॉर्ड'),
+            onTap: _showPayments,
+          ),
+          _profileOption(
+            icon: Icons.support_agent_outlined,
+            title: _t('Help & support', 'सहायता और सपोर्ट'),
+            subtitle: _t('Get help with a ride or a general issue', 'राइड या अन्य समस्या में सहायता लें'),
+            onTap: () => context.go('/support'),
+          ),
+          _profileOption(
+            icon: Icons.notifications_outlined,
+            title: _t('Notifications', 'सूचनाएं'),
+            subtitle: _t('Ride updates and safety alerts', 'राइड अपडेट और सुरक्षा अलर्ट'),
+            onTap: _showNotificationsInfo,
+          ),
+          _profileOption(
+            icon: Icons.settings_outlined,
+            title: _t('Settings', 'सेटिंग्स'),
+            subtitle: _t('Appearance, language and account preferences', 'दिखावट, भाषा और खाते की प्राथमिकताएं'),
+            onTap: () => context.push('/settings'),
+          ),
+          _profileOption(
+            icon: Icons.description_outlined,
+            title: _t('Terms & Conditions', 'नियम और शर्तें'),
+            subtitle: _t('Terms for using Quick Ride', 'Quick Ride के उपयोग की शर्तें'),
+            onTap: () => context.push('/terms'),
+          ),
+          _profileOption(
+            icon: Icons.info_outline_rounded,
+            title: _t('About Quick Ride', 'Quick Ride के बारे में'),
+            subtitle: _t('App information and version', 'ऐप की जानकारी और संस्करण'),
+            onTap: () => context.push('/about'),
+          ),
+          _profileOption(
+            icon: Icons.share_outlined,
+            title: _t('Share app', 'ऐप साझा करें'),
+            subtitle: _t('Invite friends to try Quick Ride', 'दोस्तों को Quick Ride आज़माने के लिए आमंत्रित करें'),
+            onTap: _shareApp,
+          ),
+          _profileOption(
+            icon: Icons.system_update_alt_rounded,
+            title: _t('App updates', 'ऐप अपडेट'),
+            subtitle: _t('Get updates from Google Play when the app is published', 'ऐप प्रकाशित होने पर Google Play से अपडेट प्राप्त करें'),
+            onTap: _checkForUpdates,
+          ),
+          if (user != null)
+            _profileOption(
+              icon: Icons.logout_rounded,
+              title: _t('Sign out', 'साइन आउट'),
+              subtitle: _t('Sign out of this device', 'इस डिवाइस से साइन आउट करें'),
+              onTap: _confirmSignOut,
+              destructive: true,
+            ),
+        ],
+      ),
+    );
+  }
+}
+
+class CustomerSettingsScreen extends StatefulWidget {
+  const CustomerSettingsScreen({super.key});
+
+  @override
+  State<CustomerSettingsScreen> createState() => _CustomerSettingsScreenState();
+}
+
+class _CustomerSettingsScreenState extends State<CustomerSettingsScreen> {
+  bool _deleting = false;
+
+  String _t(String english, String hindi) =>
+      QuickRideCustomerPreferences.locale.value.languageCode == 'hi' ? hindi : english;
+
+  Future<void> _openSafetyCentre() async {
+    final user = QuickRideAuth.currentUser;
+    if (user == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(_t(
+            'Sign in to access ride safety tools.',
+            'राइड सुरक्षा सुविधाओं के लिए साइन इन करें।',
+          )),
+        ),
+      );
+      return;
+    }
+    try {
+      final rows = await QuickRideBackend.client
+          .from('rides')
+          .select('id,status,created_at')
+          .eq('customer_id', user.id)
+          .inFilter('status', const [
+            'requested',
+            'searching',
+            'offered',
+            'accepted',
+            'driver_arriving',
+            'arrived',
+            'in_progress',
+          ])
+          .order('created_at', ascending: false)
+          .limit(1);
+      if (!mounted) return;
+      if (rows.isEmpty) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(_t(
+              'Trip sharing and SOS are available while a ride is active.',
+              'ट्रिप शेयरिंग और SOS सक्रिय राइड के दौरान उपलब्ध हैं।',
+            )),
+          ),
+        );
+        return;
+      }
+      final rideId = rows.first['id']?.toString();
+      if (rideId == null || rideId.isEmpty) {
+        throw StateError('The active ride could not be identified.');
+      }
+      context.go('/ride/$rideId');
+    } catch (error) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(_t(
+              'Safety tools could not be opened. Please try again.',
+              'सुरक्षा सुविधाएं नहीं खुल सकीं। कृपया फिर प्रयास करें।',
+            )),
+          ),
+        );
+      }
+    }
+  }
+
 
   Future<void> _showFareHistory() async {
     final user = QuickRideAuth.currentUser;
@@ -367,45 +687,6 @@ class _CustomerProfileScreenState extends State<CustomerProfileScreen> {
   }
 
 
-  Widget _profileOption({
-    required IconData icon,
-    required String title,
-    required String subtitle,
-    required VoidCallback onTap,
-    bool destructive = false,
-  }) {
-    final colors = Theme.of(context).colorScheme;
-    return Card(
-      margin: const EdgeInsets.only(bottom: 12),
-      clipBehavior: Clip.antiAlias,
-      child: ListTile(
-        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-        minVerticalPadding: 10,
-        leading: Container(
-          width: 54,
-          height: 54,
-          decoration: BoxDecoration(
-            color: destructive ? colors.errorContainer : colors.primaryContainer,
-            borderRadius: BorderRadius.circular(16),
-          ),
-          child: Icon(icon, color: destructive ? colors.onErrorContainer : colors.onPrimaryContainer),
-        ),
-        title: Text(
-          title,
-          style: TextStyle(
-            fontWeight: FontWeight.w700,
-            color: destructive ? colors.error : colors.onSurface,
-          ),
-        ),
-        subtitle: Text(subtitle, maxLines: 2, overflow: TextOverflow.ellipsis),
-        trailing: Icon(
-          Icons.chevron_right_rounded,
-          color: destructive ? colors.error : colors.onSurfaceVariant,
-        ),
-        onTap: onTap,
-      ),
-    );
-  }
 
   Future<void> _showFavouritePlaces() async {
     await showModalBottomSheet<void>(
@@ -480,304 +761,17 @@ class _CustomerProfileScreenState extends State<CustomerProfileScreen> {
     );
   }
 
-  Future<void> _showPayments() async {
-    await showModalBottomSheet<void>(
-      context: context,
-      showDragHandle: true,
-      builder: (sheetContext) => SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.fromLTRB(20, 8, 20, 24),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                _t('Payments', 'भुगतान'),
-                style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w800),
-              ),
-              const SizedBox(height: 12),
-              ListTile(
-                contentPadding: EdgeInsets.zero,
-                leading: const Icon(Icons.payments_outlined),
-                title: Text(_t('Cash payment', 'नकद भुगतान')),
-                subtitle: Text(_t(
-                  'Cash is available when offered for an eligible ride.',
-                  'पात्र राइड के लिए उपलब्ध होने पर नकद भुगतान किया जा सकता है।',
-                )),
-              ),
-              ListTile(
-                contentPadding: EdgeInsets.zero,
-                leading: const Icon(Icons.credit_card_outlined),
-                title: Text(_t('Digital payments', 'डिजिटल भुगतान')),
-                subtitle: Text(_t(
-                  'Additional payment methods will appear here when enabled.',
-                  'अन्य भुगतान विकल्प उपलब्ध होने पर यहां दिखाई देंगे।',
-                )),
-              ),
-              const Divider(),
-              ListTile(
-                contentPadding: EdgeInsets.zero,
-                leading: const Icon(Icons.receipt_long_outlined),
-                title: Text(_t('Fare history', 'किराया इतिहास')),
-                trailing: const Icon(Icons.chevron_right),
-                onTap: () {
-                  Navigator.of(sheetContext).pop();
-                  _showFareHistory();
-                },
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
+
+  Future<void> _manageNotifications() async {
+    final status = await QuickRideNotifications.requestPermission();
+    if (!mounted) return;
+    final message = status == null
+        ? _t('Notifications are unavailable in this build.', 'इस बिल्ड में सूचनाएं उपलब्ध नहीं हैं।')
+        : status == 'authorized' || status == 'provisional'
+            ? _t('Notifications are enabled on this device.', 'इस डिवाइस पर सूचनाएं चालू हैं।')
+            : _t('Notifications are not enabled. Allow them in Android app settings.', 'सूचनाएं चालू नहीं हैं। Android ऐप सेटिंग में अनुमति दें।');
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(message)));
   }
-
-  Future<void> _showNotificationsInfo() async {
-    await showDialog<void>(
-      context: context,
-      builder: (dialogContext) => AlertDialog(
-        title: Text(_t('Notifications', 'सूचनाएं')),
-        content: Text(_t(
-          'Quick Ride uses notifications for ride requests, driver updates and safety messages. You can manage notification permission from your Android app settings.',
-          'Quick Ride राइड अनुरोध, ड्राइवर अपडेट और सुरक्षा संदेशों के लिए सूचनाओं का उपयोग करता है। आप Android ऐप सेटिंग में सूचना अनुमति बदल सकते हैं।',
-        )),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(dialogContext).pop(),
-            child: Text(_t('Got it', 'समझ गया')),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Future<void> _shareApp() async {
-    try {
-      await SharePlus.instance.share(
-        ShareParams(
-          text: _t(
-            'Try Quick Ride for local rides and easy trip booking.',
-            'स्थानीय राइड और आसान ट्रिप बुकिंग के लिए Quick Ride आज़माएं।',
-          ),
-        ),
-      );
-    } catch (error) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(_t('Could not open the share menu. Please try again.', 'शेयर मेन्यू नहीं खुल सका। कृपया फिर प्रयास करें।'))),
-        );
-      }
-    }
-  }
-
-  Future<void> _checkForUpdates() async {
-    final uri = Uri.parse('https://github.com/mauryasujeet698-svg/Quick-Ride/releases');
-    try {
-      final opened = await launchUrl(uri, mode: LaunchMode.externalApplication);
-      if (!opened && mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(_t('Could not open the updates page.', 'अपडेट पेज नहीं खुल सका।'))),
-        );
-      }
-    } catch (error) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(_t('Could not check for updates. Please try again.', 'अपडेट नहीं देख सके। कृपया फिर प्रयास करें।'))),
-        );
-      }
-    }
-  }
-
-  Future<void> _confirmSignOut() async {
-    final confirmed = await showDialog<bool>(
-      context: context,
-      builder: (dialogContext) => AlertDialog(
-        title: Text(_t('Sign out of Quick Ride?', 'Quick Ride से साइन आउट करें?')),
-        content: Text(_t(
-          'You will be signed out on this device. Your account and ride records will remain available when you sign in again. Signing out does not cancel an active ride.',
-          'इस डिवाइस पर आपका साइन-इन समाप्त हो जाएगा। दोबारा साइन-इन करने पर आपका खाता और राइड रिकॉर्ड उपलब्ध रहेंगे। साइन आउट करने से सक्रिय राइड रद्द नहीं होगी।',
-        )),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(dialogContext).pop(false),
-            child: Text(_t('Cancel', 'रद्द करें')),
-          ),
-          FilledButton(
-            onPressed: () => Navigator.of(dialogContext).pop(true),
-            child: Text(_t('Sign out', 'साइन आउट')),
-          ),
-        ],
-      ),
-    );
-    if (confirmed != true || !mounted) return;
-    try {
-      await QuickRideAuth.signOut();
-      if (mounted) context.go('/');
-    } catch (error) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(_t('Could not sign out. Please try again.', 'साइन आउट नहीं हो सका। कृपया फिर प्रयास करें।'))),
-        );
-      }
-    }
-  }
-
-
-  @override
-  Widget build(BuildContext context) {
-    final user = QuickRideAuth.currentUser;
-    return Scaffold(
-      appBar: AppBar(title: Text(_t('Profile', 'प्रोफ़ाइल'))),
-      body: ListView(
-        padding: const EdgeInsets.fromLTRB(16, 16, 16, 24),
-        children: [
-          if (user == null)
-            Padding(
-              padding: const EdgeInsets.only(bottom: 14),
-              child: SizedBox(
-                width: double.infinity,
-                child: FilledButton.icon(
-                  style: FilledButton.styleFrom(
-                    minimumSize: const Size.fromHeight(56),
-                    shape: const StadiumBorder(),
-                  ),
-                  onPressed: QuickRideBackend.isInitialized
-                      ? () async {
-                          try {
-                            await QuickRideAuth.signInWithGoogle(
-                              redirectTo: 'in.quickride.customer://login-callback',
-                            );
-                          } catch (error) {
-                            if (context.mounted) {
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                SnackBar(content: Text(_t('Sign-in failed. Please try again.', 'साइन-इन विफल। कृपया फिर प्रयास करें।'))),
-                              );
-                            }
-                          }
-                        }
-                      : null,
-                  icon: const Icon(Icons.login_rounded),
-                  label: Text(_t('Sign in / Create account', 'साइन इन / खाता बनाएं')),
-                ),
-              ),
-            )
-          else
-            _profileOption(
-              icon: Icons.person_outline_rounded,
-              title: _t('Personal details', 'व्यक्तिगत जानकारी'),
-              subtitle: user.email ?? _t('Manage your account details', 'अपने खाते की जानकारी प्रबंधित करें'),
-              onTap: _editPersonalDetails,
-            ),
-          _profileOption(
-            icon: Icons.route_outlined,
-            title: _t('My rides', 'मेरी राइड'),
-            subtitle: _t('Current, completed and cancelled rides', 'वर्तमान, पूरी और रद्द राइड'),
-            onTap: () => context.go('/my-rides'),
-          ),
-          _profileOption(
-            icon: Icons.bookmark_border_rounded,
-            title: _t('Saved addresses', 'सेव किए गए पते'),
-            subtitle: _t('Home, work and other saved locations', 'घर, काम और अन्य सेव किए गए स्थान'),
-            onTap: _showSavedPlaces,
-          ),
-          _profileOption(
-            icon: Icons.favorite_border_rounded,
-            title: _t('Favourite places', 'पसंदीदा स्थान'),
-            subtitle: _t('Quickly choose places you have loved', 'अपने पसंदीदा स्थान जल्दी चुनें'),
-            onTap: _showFavouritePlaces,
-          ),
-          _profileOption(
-            icon: Icons.receipt_long_outlined,
-            title: _t('Fare history', 'किराया इतिहास'),
-            subtitle: _t('View and share your ride fare summaries', 'राइड किराया विवरण देखें और साझा करें'),
-            onTap: _showFareHistory,
-          ),
-          _profileOption(
-            icon: Icons.account_balance_wallet_outlined,
-            title: _t('Payments', 'भुगतान'),
-            subtitle: _t('Payment options and fare records', 'भुगतान विकल्प और किराया रिकॉर्ड'),
-            onTap: _showPayments,
-          ),
-          _profileOption(
-            icon: Icons.shield_outlined,
-            title: _t('Safety centre', 'सुरक्षा केंद्र'),
-            subtitle: _t('Live trip sharing, driver tracking and emergency SOS', 'लाइव ट्रिप शेयरिंग, ड्राइवर ट्रैकिंग और आपातकालीन SOS'),
-            onTap: _openSafetyCentre,
-          ),
-          _profileOption(
-            icon: Icons.support_agent_outlined,
-            title: _t('Help & support', 'सहायता और सपोर्ट'),
-            subtitle: _t('Get help with a ride or a general issue', 'राइड या अन्य समस्या में सहायता लें'),
-            onTap: () => context.go('/support'),
-          ),
-          _profileOption(
-            icon: Icons.notifications_outlined,
-            title: _t('Notifications', 'सूचनाएं'),
-            subtitle: _t('Ride updates and safety alerts', 'राइड अपडेट और सुरक्षा अलर्ट'),
-            onTap: _showNotificationsInfo,
-          ),
-          _profileOption(
-            icon: Icons.settings_outlined,
-            title: _t('Settings', 'सेटिंग्स'),
-            subtitle: _t('Appearance, language and account preferences', 'दिखावट, भाषा और खाते की प्राथमिकताएं'),
-            onTap: () => context.push('/settings'),
-          ),
-          _profileOption(
-            icon: Icons.privacy_tip_outlined,
-            title: _t('Privacy policy', 'गोपनीयता नीति'),
-            subtitle: _t('How Quick Ride handles your information', 'Quick Ride आपकी जानकारी का उपयोग कैसे करता है'),
-            onTap: () => context.push('/privacy-policy'),
-          ),
-          _profileOption(
-            icon: Icons.description_outlined,
-            title: _t('Terms & Conditions', 'नियम और शर्तें'),
-            subtitle: _t('Terms for using Quick Ride', 'Quick Ride के उपयोग की शर्तें'),
-            onTap: () => context.push('/terms'),
-          ),
-          _profileOption(
-            icon: Icons.info_outline_rounded,
-            title: _t('About Quick Ride', 'Quick Ride के बारे में'),
-            subtitle: _t('App information and version', 'ऐप की जानकारी और संस्करण'),
-            onTap: () => context.push('/about'),
-          ),
-          _profileOption(
-            icon: Icons.share_outlined,
-            title: _t('Share app', 'ऐप साझा करें'),
-            subtitle: _t('Invite friends to try Quick Ride', 'दोस्तों को Quick Ride आज़माने के लिए आमंत्रित करें'),
-            onTap: _shareApp,
-          ),
-          _profileOption(
-            icon: Icons.system_update_alt_rounded,
-            title: _t('App updates', 'ऐप अपडेट'),
-            subtitle: _t('Check published Quick Ride releases', 'Quick Ride के नए रिलीज़ देखें'),
-            onTap: _checkForUpdates,
-          ),
-          if (user != null)
-            _profileOption(
-              icon: Icons.logout_rounded,
-              title: _t('Sign out', 'साइन आउट'),
-              subtitle: _t('Sign out of this device', 'इस डिवाइस से साइन आउट करें'),
-              onTap: _confirmSignOut,
-              destructive: true,
-            ),
-        ],
-      ),
-    );
-  }
-}
-
-class CustomerSettingsScreen extends StatefulWidget {
-  const CustomerSettingsScreen({super.key});
-
-  @override
-  State<CustomerSettingsScreen> createState() => _CustomerSettingsScreenState();
-}
-
-class _CustomerSettingsScreenState extends State<CustomerSettingsScreen> {
-  bool _deleting = false;
-
-  String _t(String english, String hindi) =>
-      QuickRideCustomerPreferences.locale.value.languageCode == 'hi' ? hindi : english;
 
   Future<void> _deleteAccount() async {
     final confirmed = await showDialog<bool>(
@@ -896,19 +890,45 @@ class _CustomerSettingsScreenState extends State<CustomerSettingsScreen> {
               title: Text(_t('Notification preferences', 'सूचना प्राथमिकताएं')),
               subtitle: Text(_t('Manage notification permission in device settings', 'डिवाइस सेटिंग में सूचना अनुमति प्रबंधित करें')),
               trailing: const Icon(Icons.chevron_right),
-              onTap: () => showDialog<void>(
-                context: context,
-                builder: (dialogContext) => AlertDialog(
-                  title: Text(_t('Notifications', 'सूचनाएं')),
-                  content: Text(_t(
-                    'Ride updates and safety alerts use Android notification permission. To change permission, open Android Settings → Apps → Quick Ride → Notifications.',
-                    'राइड अपडेट और सुरक्षा अलर्ट के लिए Android सूचना अनुमति आवश्यक है। अनुमति बदलने के लिए Android Settings → Apps → Quick Ride → Notifications खोलें।',
-                  )),
-                  actions: [
-                    TextButton(onPressed: () => Navigator.of(dialogContext).pop(), child: Text(_t('OK', 'ठीक है'))),
-                  ],
+              onTap: _manageNotifications,
+            ),
+          ),
+          Card(
+            margin: const EdgeInsets.only(bottom: 12),
+            child: Column(
+              children: [
+                ListTile(
+                  leading: const Icon(Icons.shield_outlined),
+                  title: Text(_t('Safety centre', 'सुरक्षा केंद्र')),
+                  subtitle: Text(_t('Live trip sharing, driver tracking and emergency SOS', 'लाइव ट्रिप शेयरिंग, ड्राइवर ट्रैकिंग और आपातकालीन SOS')),
+                  trailing: const Icon(Icons.chevron_right),
+                  onTap: _openSafetyCentre,
                 ),
-              ),
+                const Divider(height: 1),
+                ListTile(
+                  leading: const Icon(Icons.receipt_long_outlined),
+                  title: Text(_t('Fare history', 'किराया इतिहास')),
+                  subtitle: Text(_t('View and share your ride fare summaries', 'राइड किराया विवरण देखें और साझा करें')),
+                  trailing: const Icon(Icons.chevron_right),
+                  onTap: _showFareHistory,
+                ),
+                const Divider(height: 1),
+                ListTile(
+                  leading: const Icon(Icons.favorite_border_rounded),
+                  title: Text(_t('Favourite places', 'पसंदीदा स्थान')),
+                  subtitle: Text(_t('Quickly choose your saved favourite places', 'अपने सेव किए गए पसंदीदा स्थान चुनें')),
+                  trailing: const Icon(Icons.chevron_right),
+                  onTap: _showFavouritePlaces,
+                ),
+                const Divider(height: 1),
+                ListTile(
+                  leading: const Icon(Icons.privacy_tip_outlined),
+                  title: Text(_t('Privacy policy', 'गोपनीयता नीति')),
+                  subtitle: Text(_t('How Quick Ride handles your information', 'Quick Ride आपकी जानकारी का उपयोग कैसे करता है')),
+                  trailing: const Icon(Icons.chevron_right),
+                  onTap: () => context.push('/privacy-policy'),
+                ),
+              ],
             ),
           ),
           Card(
