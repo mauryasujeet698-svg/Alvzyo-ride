@@ -129,6 +129,18 @@ class QuickRideNotifications {
     }
   }
 
+  static Future<String?> requestPermission() async {
+    final messaging = _messaging;
+    if (messaging == null) return null;
+    final settings = await messaging.requestPermission(
+      alert: true,
+      badge: true,
+      sound: true,
+      provisional: false,
+    );
+    return settings.authorizationStatus.name;
+  }
+
   static Future<RemoteMessage?> consumeInitialMessage() async {
     final value = _initialMessage;
     _initialMessage = null;
