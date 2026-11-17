@@ -201,11 +201,14 @@ jobs:
           for value in "${signing_values[@]}"; do
             [[ -n "$value" ]] && signing_count=$((signing_count + 1))
           done
-          if [[ "$signing_count" != "4" ]]; then
-            echo "::error::Stable Android signing is required for reliable Google sign-in. Configure ANDROID_KEYSTORE_BASE64, ANDROID_KEYSTORE_PASSWORD, ANDROID_KEY_ALIAS and ANDROID_KEY_PASSWORD in GitHub Actions secrets."
+          if [[ "$signing_count" == "0" ]]; then
+            echo "::warning::No stable release keystore is configured. Building test APKs with the generated Android debug key; these APKs are not suitable for Play Store upload."
+          elif [[ "$signing_count" != "4" ]]; then
+            echo "::error::Android release signing secrets are only partially configured. Set all four: ANDROID_KEYSTORE_BASE64, ANDROID_KEYSTORE_PASSWORD, ANDROID_KEY_ALIAS and ANDROID_KEY_PASSWORD."
             exit 1
+          else
+            echo "Stable Android release signing is configured."
           fi
-          echo "Stable Android release signing is configured."
       - name: Verify Mapbox token and native services
         shell: bash
         run: |
@@ -337,6 +340,9 @@ jobs:
                 echo "::warning::Android build failed for ${app}; continuing to collect other app APKs and diagnostics."
                 touch ../../dist/BUILD_FAILED
                 exit 0
+              fi
+              if [[ "${app}" == "customer" && -z "$ANDROID_KEYSTORE_BASE64" && -f "$HOME/.android/debug.keystore" ]]; then
+                keytool -list -v -keystore "$HOME/.android/debug.keystore" -storepass android -alias androiddebugkey 2>/dev/null | awk '/SHA1:|SHA256:/{print "Android debug signing " $1 " " $2}'
               fi
             )
             mkdir -p "dist/${app}"
