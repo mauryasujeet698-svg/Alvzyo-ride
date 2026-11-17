@@ -81,10 +81,12 @@ class _QuickRideDriverBootstrapState extends State<QuickRideDriverBootstrap> {
   }
 
   void _handleOpenedMessage(dynamic message) {
+    unawaited(QuickRideNotifications.recordMessage(message));
     WidgetsBinding.instance.addPostFrameCallback((_) => _openMessage(message));
   }
 
   void _handleForegroundMessage(dynamic message) {
+    unawaited(QuickRideNotifications.recordMessage(message));
     final isRideOffer = message.data['type'] == 'ride_offer';
     if (isRideOffer) {
       unawaited(SystemSound.play(SystemSoundType.alert));
