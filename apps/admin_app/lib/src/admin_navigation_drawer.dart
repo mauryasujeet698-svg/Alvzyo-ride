@@ -61,11 +61,23 @@ class AdminNavigationDrawer extends StatelessWidget {
                 enabled: QuickRideBackend.isInitialized,
                 onTap: !QuickRideBackend.isInitialized
                     ? null
-                    : () {
+                    : () async {
                         Navigator.of(context).pop();
-                        QuickRideAuth.signInWithGoogle(
-                          redirectTo: 'in.quickride.admin://login-callback',
-                        );
+                        try {
+                          await QuickRideAuth.signInWithGoogle(
+                            redirectTo: 'in.quickride.admin://login-callback',
+                          );
+                        } catch (error) {
+                          if (context.mounted) {
+                            final details = error.toString();
+                            final safeDetails = details.length > 140
+                                ? details.substring(0, 140)
+                                : details;
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(content: Text('Google sign-in failed: $safeDetails')),
+                            );
+                          }
+                        }
                       },
               )
             else
