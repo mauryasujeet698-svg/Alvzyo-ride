@@ -32,6 +32,8 @@ class CustomerNavigationBar extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final safeBottom = MediaQuery.paddingOf(context).bottom;
+    final colors = Theme.of(context).colorScheme;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     final selectedIndex = navigationShell.currentIndex;
     return SafeArea(
       top: false,
@@ -39,7 +41,7 @@ class CustomerNavigationBar extends StatelessWidget {
       child: Container(
         padding: const EdgeInsets.all(4),
         decoration: BoxDecoration(
-          color: const Color(0xFF17251E),
+          color: isDark ? const Color(0xFF17251E) : colors.surfaceContainerHighest,
           borderRadius: BorderRadius.circular(25),
           boxShadow: [
             BoxShadow(
@@ -73,7 +75,7 @@ class CustomerNavigationBar extends StatelessWidget {
                       padding: const EdgeInsets.symmetric(vertical: 5, horizontal: 2),
                       decoration: BoxDecoration(
                         color: selected
-                            ? const Color(0xFF83CFFF)
+                            ? colors.primaryContainer
                             : Colors.transparent,
                         borderRadius: BorderRadius.circular(21),
                       ),
@@ -84,8 +86,8 @@ class CustomerNavigationBar extends StatelessWidget {
                             selected ? item.selectedIcon : item.icon,
                             size: 21,
                             color: selected
-                                ? const Color(0xFF102B3D)
-                                : const Color(0xFFC5D1CA),
+                                ? colors.onPrimaryContainer
+                                : colors.onSurfaceVariant,
                           ),
                           const SizedBox(height: 2),
                           Text(
@@ -97,8 +99,8 @@ class CustomerNavigationBar extends StatelessWidget {
                               height: 1.05,
                               fontWeight: selected ? FontWeight.w800 : FontWeight.w600,
                               color: selected
-                                  ? const Color(0xFF102B3D)
-                                  : const Color(0xFFC5D1CA),
+                                  ? colors.onPrimaryContainer
+                                  : colors.onSurfaceVariant,
                             ),
                           ),
                         ],
