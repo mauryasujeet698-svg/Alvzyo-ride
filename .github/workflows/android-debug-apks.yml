@@ -209,13 +209,19 @@ jobs:
           else
             echo "Stable Android release signing is configured."
           fi
-      - name: Keep Mapbox API disabled for testing
+      - name: Verify Mapbox public access token
         shell: bash
         run: |
           set -euo pipefail
-          echo "::notice::Mapbox API access is disabled for this testing build as requested. Mapbox code and dependencies remain in the apps; restore a valid public token and re-enable the preflight when ready."
-          echo "MAPBOX_ACCESS_TOKEN=" >> "$GITHUB_ENV"
-          echo "MAPBOX_TOKEN_SOURCE=disabled-for-testing" >> "$GITHUB_ENV"
+          if [[ -z "${MAPBOX_ACCESS_TOKEN//[[:space:]]/}" ]]; then
+            echo "::error::MAPBOX_ACCESS_TOKEN is missing. Add the public Mapbox token (pk.*) as the MAPBOX_ACCESS_TOKEN GitHub Actions secret or repository variable."
+            exit 1
+          fi
+          if [[ ! "$MAPBOX_ACCESS_TOKEN" =~ ^pk\.[A-Za-z0-9._-]+$ ]]; then
+            echo "::error::MAPBOX_ACCESS_TOKEN must be a public Mapbox token beginning with pk.; do not use an sk.* secret token."
+            exit 1
+          fi
+          echo "Mapbox public access token is configured (value redacted; source: $MAPBOX_TOKEN_SOURCE)."
 
       - name: Build optimized ABI-specific APKs
         shell: bash
