@@ -8,3 +8,4 @@ dependencies:
   firebase_messaging: ^17.0.1
   quick_ride_backend:
     path: ../quick_ride_backend
+  shared_preferences: ^2.5.3
