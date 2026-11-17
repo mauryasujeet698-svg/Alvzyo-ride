@@ -310,27 +310,6 @@ class _CustomerProfileScreenState extends State<CustomerProfileScreen> {
     );
   }
 
-  Future<void> _showNotificationsInfo() async {
-    context.push('/settings');
-    return;
-    await showDialog<void>(
-      context: context,
-      builder: (dialogContext) => AlertDialog(
-        title: Text(_t('Notifications', 'सूचनाएं')),
-        content: Text(_t(
-          'Quick Ride uses notifications for ride requests, driver updates and safety messages. You can manage notification permission from your Android app settings.',
-          'Quick Ride राइड अनुरोध, ड्राइवर अपडेट और सुरक्षा संदेशों के लिए सूचनाओं का उपयोग करता है। आप Android ऐप सेटिंग में सूचना अनुमति बदल सकते हैं।',
-        )),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(dialogContext).pop(),
-            child: Text(_t('Got it', 'समझ गया')),
-          ),
-        ],
-      ),
-    );
-  }
-
   Future<void> _shareApp() async {
     try {
       await SharePlus.instance.share(
@@ -475,7 +454,7 @@ class _CustomerProfileScreenState extends State<CustomerProfileScreen> {
             icon: Icons.notifications_outlined,
             title: _t('Notifications', 'सूचनाएं'),
             subtitle: _t('Ride updates and safety alerts', 'राइड अपडेट और सुरक्षा अलर्ट'),
-            onTap: _showNotificationsInfo,
+            onTap: () => context.push('/notifications'),
           ),
           _profileOption(
             icon: Icons.settings_outlined,
@@ -1039,4 +1018,109 @@ class CustomerInformationScreen extends StatelessWidget {
       ),
     );
   }
+}
+
+
+class CustomerNotificationsScreen extends StatelessWidget {
+  const CustomerNotificationsScreen({super.key});
+
+  @override
+  Widget build(BuildContext context) => Scaffold(
+        appBar: AppBar(
+          title: const Text('Notifications'),
+          actions: [
+            IconButton(
+              tooltip: 'Clear notifications',
+              onPressed: QuickRideNotifications.inbox.value.isEmpty
+                  ? null
+                  : () => QuickRideNotifications.clearInbox(),
+              icon: const Icon(Icons.delete_sweep_outlined),
+            ),
+          ],
+        ),
+        body: ValueListenableBuilder<List<Map<String, dynamic>>>(
+          valueListenable: QuickRideNotifications.inbox,
+          builder: (context, messages, _) {
+            if (messages.isEmpty) {
+              return const Center(
+                child: Padding(
+                  padding: EdgeInsets.all(28),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(Icons.notifications_none_rounded, size: 52),
+                      SizedBox(height: 12),
+                      Text('You are all caught up.',
+                          style: TextStyle(fontWeight: FontWeight.w700)),
+                      SizedBox(height: 6),
+                      Text('Ride updates and safety alerts will appear here.',
+                          textAlign: TextAlign.center),
+                    ],
+                  ),
+                ),
+              );
+            }
+            return ListView.separated(
+              padding: const EdgeInsets.all(12),
+              itemCount: messages.length,
+              separatorBuilder: (_, __) => const SizedBox(height: 6),
+              itemBuilder: (context, index) {
+                final item = messages[index];
+                final id = item['id']?.toString() ?? '';
+                final data = item['data'] is Map
+                    ? Map<String, dynamic>.from(item['data'] as Map)
+                    : <String, dynamic>{};
+                final date = DateTime.tryParse(item['received_at']?.toString() ?? '');
+                final unread = item['is_read'] != true;
+                return Card(
+                  child: ListTile(
+                    leading: CircleAvatar(
+                      backgroundColor: Theme.of(context).colorScheme.primaryContainer,
+                      child: Icon(
+                        Icons.notifications_active_outlined,
+                        color: Theme.of(context).colorScheme.onPrimaryContainer,
+                      ),
+                    ),
+                    title: Text(
+                      item['title']?.toString() ?? 'Quick Ride',
+                      style: TextStyle(fontWeight: unread ? FontWeight.w800 : FontWeight.w500),
+                    ),
+                    subtitle: Text(
+                      [
+                        item['body']?.toString() ?? 'You have an update.',
+                        if (date != null) date.toLocal().toString().substring(0, 16),
+                      ].join(' · '),
+                    ),
+                    trailing: unread
+                        ? Icon(Icons.circle, size: 9, color: Theme.of(context).colorScheme.primary)
+                        : const Icon(Icons.chevron_right),
+                    onTap: () async {
+                      if (id.isNotEmpty) await QuickRideNotifications.markRead(id);
+                      if (!context.mounted) return;
+                      final rideId = data['ride_id'];
+                      if (rideId is String && rideId.isNotEmpty) {
+                        context.go('/ride/${Uri.encodeComponent(rideId)}');
+                      } else {
+                        showDialog<void>(
+                          context: context,
+                          builder: (dialogContext) => AlertDialog(
+                            title: Text(item['title']?.toString() ?? 'Quick Ride'),
+                            content: Text(item['body']?.toString() ?? 'You have an update.'),
+                            actions: [
+                              TextButton(
+                                onPressed: () => Navigator.of(dialogContext).pop(),
+                                child: const Text('Close'),
+                              ),
+                            ],
+                          ),
+                        );
+                      }
+                    },
+                  ),
+                );
+              },
+            );
+          },
+        ),
+      );
 }
