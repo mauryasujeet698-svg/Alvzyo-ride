@@ -1,4 +1,4 @@
-name: Build Quick-Ride Native Android Release APKs
+name: Build Alvzyo Customer Android Release APK
 on:
   pull_request:
     branches: [main]
@@ -51,9 +51,9 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          for app in customer driver admin; do
+          for app in customer; do
             temp_dir="$(mktemp -d)"
-            flutter create --empty --project-name "$app" --org com.quickride --platforms android "$temp_dir"
+            flutter create --empty --project-name "$app" --org com.alvzyo.ride --platforms android "$temp_dir"
             cp -R "$temp_dir/android" "apps/${app}_app/android"
             python3 - "apps/${app}_app/android/gradle.properties" <<'PY'
           from pathlib import Path
@@ -68,7 +68,7 @@ jobs:
           path.write_text("\n".join(lines) + "\n")
           PY
             manifest="apps/${app}_app/android/app/src/main/AndroidManifest.xml"
-            python3 scripts/configure_android_manifest.py "$manifest" "com.quickride.${app}"
+            python3 scripts/configure_android_manifest.py "$manifest" "com.alvzyo.ride.${app}"
             python3 - "apps/${app}_app/android/settings.gradle.kts" <<'PY'
           from pathlib import Path
           import re
@@ -228,7 +228,7 @@ jobs:
         run: |
           set -euo pipefail
           mkdir -p dist
-          for app in customer driver admin; do
+          for app in customer; do
             case "$app" in
               customer) firebase_app_id="$FIREBASE_CUSTOMER_APP_ID" ;;
               driver) firebase_app_id="$FIREBASE_DRIVER_APP_ID" ;;
@@ -328,7 +328,7 @@ jobs:
             mkdir -p "dist/${app}"
             for abi in armeabi-v7a arm64-v8a; do
               source="apps/${app}_app/build/app/outputs/flutter-apk/app-${abi}-release.apk"
-              output="dist/${app}/quick-ride-${app}-${abi}.apk"
+              output="dist/${app}/alvzyo-${app}-${abi}.apk"
               if [[ ! -s "$source" ]]; then
                 echo "::warning::Missing ${abi} APK for ${app}; continuing with remaining targets."
                 touch dist/BUILD_FAILED
@@ -365,7 +365,7 @@ jobs:
           cat dist/APK_CONTENT_BREAKDOWN.txt
       - uses: actions/upload-artifact@v4
         with:
-          name: quick-ride-android-25mb-apks
+          name: alvzyo-customer-android-apks
           path: dist/*
           if-no-files-found: error
           retention-days: 1
