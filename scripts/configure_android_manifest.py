@@ -42,7 +42,7 @@ def main() -> int:
         ])
 
     app_labels = {
-        "customer": "Quick Ride",
+        "customer": "Alvzyo ride",
         "driver": "Quick Ride Captain",
         "admin": "Admin",
     }
