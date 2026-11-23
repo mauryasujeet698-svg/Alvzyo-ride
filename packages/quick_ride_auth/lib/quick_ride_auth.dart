@@ -26,12 +26,12 @@ class QuickRideAuth {
   /// Native Google account selection followed by a Supabase ID-token exchange.
   ///
   /// [redirectTo] remains in the signature for existing app callers. It is
-  /// intentionally unused: native authentication returns directly to Quick Ride.
+  /// intentionally unused: native authentication returns directly to the app.
   static Future<AuthResponse> signInWithGoogle({
     required String redirectTo,
   }) async {
     if (!QuickRideBackend.isInitialized) {
-      throw const AuthException('Quick Ride could not connect to its sign-in service.');
+      throw const AuthException('Alvzyo could not connect to its sign-in service.');
     }
     if (_googleWebClientId.isEmpty) {
       throw const AuthException(
@@ -75,7 +75,7 @@ class QuickRideAuth {
         idToken: idToken,
       );
     } catch (error, stack) {
-      debugPrint('Quick Ride Google sign-in failed (${error.runtimeType}): $error');
+      debugPrint('Alvzyo Google sign-in failed (${error.runtimeType}): $error');
       debugPrintStack(stackTrace: stack);
       _googleInitialization = null;
       rethrow;
