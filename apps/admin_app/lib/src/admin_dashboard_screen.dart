@@ -75,7 +75,13 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
   }
 
   Future<void> _signIn() async {
-    if (!QuickRideBackend.isInitialized || _signInBusy) return;
+    if (_signInBusy) return;
+    if (!QuickRideBackend.isInitialized) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Alvzyo sign-in service is not initialized. Check the connection and app configuration.')),
+      );
+      return;
+    }
     setState(() => _signInBusy = true);
     try {
       await QuickRideAuth.signInWithGoogle(
@@ -128,7 +134,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
           else
             IconButton(
               tooltip: 'Sign in with Google',
-              onPressed: QuickRideBackend.isInitialized && !_signInBusy ? _signIn : null,
+              onPressed: _signInBusy ? null : _signIn,
               icon: const Icon(Icons.login_rounded),
             ),
         ],
