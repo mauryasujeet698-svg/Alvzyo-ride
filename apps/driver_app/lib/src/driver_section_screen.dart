@@ -202,10 +202,6 @@ class _DriverSectionScreenState extends State<DriverSectionScreen> {
       bottomNavigationBar: DriverBottomNavigationBar(currentIndex: selectedTab),
       appBar: AppBar(
         title: Text(page.title),
-        leading: IconButton(
-          onPressed: () => context.pop(),
-          icon: const Icon(Icons.arrow_back_rounded),
-        ),
       ),
       body: ListView(
         padding: const EdgeInsets.all(18),
