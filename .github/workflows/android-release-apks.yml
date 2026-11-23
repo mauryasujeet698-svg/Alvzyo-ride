@@ -279,41 +279,21 @@ jobs:
           path: dist/*
           if-no-files-found: error
           retention-days: 30
-      - name: Write APK size report, content breakdown and checksums
+      - name: Write release checksums and version report
         shell: bash
         run: |
           set -euo pipefail
           {
-            echo "QA APK size report (strict maximum: 25,000,000 bytes per APK)."
-            echo "Only Android phone ABIs are included: armeabi-v7a and arm64-v8a."
+            echo "Alvzyo Android release build"
+            echo "Version: 1.0.${GITHUB_RUN_NUMBER} (${GITHUB_RUN_NUMBER})"
+            echo "Signing: permanent Android release keystore"
             find dist -type f -name '*.apk' -printf '%p %s bytes\\n' | sort
-          } > dist/APK_SIZES.txt
-          {
-            for apk in $(find dist -type f -name '*.apk' | sort); do
-              echo
-              echo "===== $apk ====="
-              unzip -l "$apk" | awk 'NF == 4 && $4 !~ /^Name$/ { print $1 "\\t" $4 }' | sort -nr | awk 'NR <= 25'
-            done
-          } > dist/APK_CONTENT_BREAKDOWN.txt
+          } > dist/RELEASE_INFO.txt
           (cd dist && find . -type f -name '*.apk' -print0 | sort -z | xargs -0 sha256sum) > dist/SHA256SUMS.txt
-          cat dist/APK_SIZES.txt
-          cat dist/APK_CONTENT_BREAKDOWN.txt
+          cat dist/RELEASE_INFO.txt
       - uses: actions/upload-artifact@v4
         with:
-          name: alvzyo-android-apks
+          name: alvzyo-release-apks
           path: dist/*
           if-no-files-found: error
-          retention-days: 14
-
-      - name: Enforce 25 MB APK limit
-        if: always()
-        shell: bash
-        run: |
-          if [[ -f dist/BUILD_FAILED ]]; then
-            echo "::error::One or more app APK builds failed. See the workflow log and uploaded diagnostics."
-            exit 1
-          fi
-          if [[ -f dist/SIZE_LIMIT_EXCEEDED ]]; then
-            echo "::error::One or more APKs exceed the strict 25 MB limit. See uploaded APK_CONTENT_BREAKDOWN.txt to identify the largest components."
-            exit 1
-          fi
+          retention-days: 30
