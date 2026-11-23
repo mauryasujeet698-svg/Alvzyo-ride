@@ -801,12 +801,12 @@ class _DriverHomeScreenState extends State<DriverHomeScreen> {
           _previewTile(
             Icons.toggle_off_outlined,
             'Availability',
-            'Online/offline status and approved operating pincode',, route: '/section/profile'
+            'Online/offline status and approved operating pincode', route: '/section/profile'
           ),
           _previewTile(
             Icons.account_balance_wallet_outlined,
             'Earnings and settlements',
-            'Daily earnings, completed trips and settlement summary',, route: '/section/earnings'
+            'Daily earnings, completed trips and settlement summary', route: '/section/earnings'
           ),
           const SizedBox(height: 14),
           Text('Ride management',
@@ -815,22 +815,22 @@ class _DriverHomeScreenState extends State<DriverHomeScreen> {
           _previewTile(
             Icons.notifications_active_outlined,
             'Ride offers',
-            'View pickup details, expiry and accept or reject offers',, route: '/section/rides'
+            'View pickup details, expiry and accept or reject offers', route: '/section/rides'
           ),
           _previewTile(
             Icons.alt_route_rounded,
             'Next-ride offers',
-            'See possible follow-up rides near the current destination',, route: '/section/rides'
+            'See possible follow-up rides near the current destination', route: '/section/rides'
           ),
           _previewTile(
             Icons.navigation_outlined,
             'Trip navigation',
-            'Mapbox route, live GPS, ETA and spoken directions',, route: '/section/rides'
+            'Mapbox route, live GPS, ETA and spoken directions', route: '/section/rides'
           ),
           _previewTile(
             Icons.pin_outlined,
             'Pickup verification',
-            'Verify customer OTP and update each trip status',, route: '/section/rides'
+            'Verify customer OTP and update each trip status', route: '/section/rides'
           ),
           const SizedBox(height: 14),
           Text('Driver onboarding',
@@ -839,22 +839,22 @@ class _DriverHomeScreenState extends State<DriverHomeScreen> {
           _previewTile(
             Icons.directions_car_outlined,
             'Vehicle registration',
-            'Select a vehicle category and submit vehicle information',, route: '/section/profile'
+            'Select a vehicle category and submit vehicle information', route: '/section/profile'
           ),
           _previewTile(
             Icons.upload_file_outlined,
             'Document verification',
-            'Upload driving licence, RC and insurance for admin review',, route: '/section/documents'
+            'Upload driving licence, RC and insurance for admin review', route: '/section/documents'
           ),
           _previewTile(
             Icons.location_on_outlined,
             'Service pincodes',
-            'Apply to operate in additional approved service areas',, route: '/section/profile'
+            'Apply to operate in additional approved service areas', route: '/section/profile'
           ),
           _previewTile(
             Icons.sos_outlined,
             'Emergency support',
-            'Emergency dialer and ride-linked SOS event',, route: '/section/support'
+            'Emergency dialer and ride-linked SOS event', route: '/section/support'
           ),
           const SizedBox(height: 18),
           FilledButton.icon(
