@@ -7,7 +7,7 @@ void main() {
   testWidgets('captain can explore the read-only preview before backend setup',
       (tester) async {
     QuickRideMaps.mapWidgetOverride = (_, __) => const ColoredBox(
-          key: ValueKey('captain-map-test-placeholder'),
+          key: ValueKey('alvzyo-driver-map-test-placeholder'),
           color: Colors.transparent,
         );
     addTearDown(() {
@@ -17,22 +17,17 @@ void main() {
     await tester.pumpWidget(const MaterialApp(home: DriverHomeScreen()));
     await tester.pump();
 
-    expect(find.text('Quick Ride Captain'), findsOneWidget);
-    expect(find.text('Driver partner'), findsOneWidget);
+    expect(find.text('Alvzyo Driver'), findsOneWidget);
+    expect(find.text('Ready to accept rides?'), findsOneWidget);
     expect(find.textContaining('Preview mode · Read only'), findsOneWidget);
     expect(find.byKey(const ValueKey('captain-map-test-placeholder')), findsOneWidget);
     await tester.scrollUntilVisible(
-      find.text('Trip navigation'),
+      find.text('Sign in with Google'),
       250,
       scrollable: find.byType(Scrollable).first,
     );
-    expect(find.text('Trip navigation'), findsOneWidget);
-    await tester.scrollUntilVisible(
-      find.text('Sign in to activate driver features'),
-      250,
-      scrollable: find.byType(Scrollable).first,
-    );
-    expect(find.text('Sign in to activate driver features'), findsOneWidget);
+    expect(find.text('Sign in with Google'), findsOneWidget);
+    expect(find.text('Ride history'), findsOneWidget);
     expect(find.text('Quick-Ride backend is not configured.'), findsNothing);
   });
 }
