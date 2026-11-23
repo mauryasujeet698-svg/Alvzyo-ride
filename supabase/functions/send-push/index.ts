@@ -166,7 +166,7 @@ Deno.serve(async (req: Request) => {
           },
           body: JSON.stringify({
             message: {
-              fid: device.token,
+              token: device.token,
               notification: { title, body: messageBody },
               data,
               android: {
