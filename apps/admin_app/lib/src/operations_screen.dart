@@ -253,10 +253,38 @@ class _AdminOperationsScreenState extends State<AdminOperationsScreen> {
         drawer: const AdminNavigationDrawer(),
         appBar: AppBar(
           title: const Text('Operations preview'),
-          leading: IconButton(
-            onPressed: () => context.pop(),
-            icon: const Icon(Icons.arrow_back),
+          leading: Builder(
+            builder: (context) => IconButton(
+              tooltip: 'Open admin menu',
+              onPressed: () => Scaffold.of(context).openDrawer(),
+              icon: const Icon(Icons.menu),
+            ),
           ),
+          actions: [
+            if (QuickRideAuth.currentUser == null)
+              IconButton(
+                tooltip: 'Sign in with Google',
+                onPressed: QuickRideBackend.isInitialized
+                    ? () async {
+                        try {
+                          await QuickRideAuth.signInWithGoogle(
+                            redirectTo: 'in.quickride.admin://login-callback',
+                          );
+                        } catch (error) {
+                          if (!context.mounted) return;
+                          final details = error.toString();
+                          final safeDetails = details.length > 140
+                              ? details.substring(0, 140)
+                              : details;
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(content: Text('Google sign-in failed: $safeDetails')),
+                          );
+                        }
+                      }
+                    : null,
+                icon: const Icon(Icons.login_rounded),
+              ),
+          ],
         ),
         body: ListView(
           padding: const EdgeInsets.all(18),
