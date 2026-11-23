@@ -21,7 +21,7 @@ void main() {
       250,
       scrollable: find.byType(Scrollable).first,
     );
-    expect(find.text('Sign in to manage Quick-Ride'), findsOneWidget);
+    expect(find.text('Sign in to manage Alvzyo'), findsOneWidget);
     expect(
       find.text('Supabase URL and anon key are required at build time.'),
       findsNothing,
