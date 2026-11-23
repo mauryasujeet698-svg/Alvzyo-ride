@@ -15,6 +15,7 @@ class DriverSectionScreen extends StatefulWidget {
 
 class _DriverSectionScreenState extends State<DriverSectionScreen> {
   late Future<dynamic> _data;
+  bool _signInBusy = false;
 
   static const _copy = <String, ({String title, String intro, List<String> details})>{
     'rides': (
@@ -77,6 +78,26 @@ class _DriverSectionScreenState extends State<DriverSectionScreen> {
   void didUpdateWidget(covariant DriverSectionScreen oldWidget) {
     super.didUpdateWidget(oldWidget);
     if (oldWidget.section != widget.section) _data = _load();
+  }
+
+  Future<void> _signIn() async {
+    if (!QuickRideBackend.isInitialized || _signInBusy) return;
+    setState(() => _signInBusy = true);
+    try {
+      await QuickRideAuth.signInWithGoogle(
+        redirectTo: 'com.alvzyo.ride.driver://login-callback',
+      );
+    } catch (error) {
+      if (mounted) {
+        final details = error.toString();
+        final safeDetails = details.length > 180 ? details.substring(0, 180) : details;
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Google sign-in failed: $safeDetails')),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _signInBusy = false);
+    }
   }
 
   Future<dynamic> _load() async {
@@ -248,13 +269,9 @@ class _DriverSectionScreenState extends State<DriverSectionScreen> {
             Padding(
               padding: const EdgeInsets.only(top: 12),
               child: FilledButton.icon(
-                onPressed: QuickRideBackend.isInitialized
-                    ? () => QuickRideAuth.signInWithGoogle(
-                          redirectTo: 'in.quickride.driver://login-callback',
-                        )
-                    : null,
-                icon: const Icon(Icons.login_rounded),
-                label: const Text('Sign in with Google'),
+                onPressed: QuickRideBackend.isInitialized && !_signInBusy ? _signIn : null,
+                icon: _signInBusy ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2)) : const Icon(Icons.login_rounded),
+                label: Text(_signInBusy ? 'Signing in…' : 'Sign in with Google'),
               ),
             ),
         ],
