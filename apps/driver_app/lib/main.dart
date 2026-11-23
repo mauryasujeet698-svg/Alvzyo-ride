@@ -98,7 +98,7 @@ class _QuickRideDriverBootstrapState extends State<QuickRideDriverBootstrap> {
     QuickRideDriverApp.messengerKey.currentState?.showSnackBar(
       SnackBar(
         content: Text(
-          '${notification.title ?? 'Quick-Ride'}\n'
+          '${notification.title ?? 'Alvzyo'}\n'
           '${notification.body ?? 'You have an update.'}',
         ),
         action: SnackBarAction(
