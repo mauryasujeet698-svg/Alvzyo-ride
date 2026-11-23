@@ -268,6 +268,12 @@ class _DriverSectionScreenState extends State<DriverSectionScreen> {
             Text('App information', style: Theme.of(context).textTheme.titleMedium),
             const SizedBox(height: 8),
             ListTile(
+              leading: const Icon(Icons.description_outlined),
+              title: const Text('Documents'),
+              trailing: const Icon(Icons.chevron_right),
+              onTap: () => context.push('/section/documents'),
+            ),
+            ListTile(
               leading: const Icon(Icons.settings_outlined),
               title: const Text('Settings'),
               trailing: const Icon(Icons.chevron_right),
