@@ -58,7 +58,7 @@ class _QuickRideDriverBootstrapState extends State<QuickRideDriverBootstrap> {
         if (initial != null) _handleOpenedMessage(initial);
       }
     } catch (error) {
-      debugPrint('Quick-Ride Driver startup failed (' + error.runtimeType.toString() + ').');
+      debugPrint('Alvzyo Driver startup failed (' + error.runtimeType.toString() + ').');
       _startupError = 'Connection unavailable. Preview mode is active.';
     } finally {
       if (mounted) setState(() => _ready = true);
@@ -121,7 +121,7 @@ class _QuickRideDriverBootstrapState extends State<QuickRideDriverBootstrap> {
   Widget build(BuildContext context) {
     if (!_ready) {
       return MaterialApp(
-        title: 'Quick Ride Captain',
+        title: 'Alvzyo Driver',
         theme: QuickRideTheme.light(),
         darkTheme: QuickRideTheme.dark(),
         home: const Scaffold(
@@ -131,7 +131,7 @@ class _QuickRideDriverBootstrapState extends State<QuickRideDriverBootstrap> {
               children: [
                 CircularProgressIndicator(),
                 SizedBox(height: 14),
-                Text('Starting Quick Ride Captain…'),
+                Text('Starting Alvzyo Driver…'),
               ],
             ),
           ),
@@ -174,7 +174,7 @@ class QuickRideDriverApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) => MaterialApp.router(
         scaffoldMessengerKey: messengerKey,
-        title: 'Quick Ride Captain',
+        title: 'Alvzyo Driver',
         theme: QuickRideTheme.light(),
         darkTheme: QuickRideTheme.dark(),
         routerConfig: router,
