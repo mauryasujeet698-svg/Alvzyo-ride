@@ -801,7 +801,7 @@ class _DriverHomeScreenState extends State<DriverHomeScreen> {
                   const SizedBox(width: 12),
                   Expanded(
                     child: Text(
-                      'Preview mode · Read only\\n'
+                      'Preview mode · Read only\n'
                       'Sign in with your approved driver account to go online, receive ride offers and manage active trips.',
                       style: TextStyle(color: colors.onSecondaryContainer),
                     ),
