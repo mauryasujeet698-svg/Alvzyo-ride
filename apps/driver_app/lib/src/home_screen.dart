@@ -33,10 +33,6 @@ class _DriverHomeScreenState extends State<DriverHomeScreen> {
   int _mapRecenterSignal = 0;
   bool _syncingAvailability = false;
   String? _availabilitySyncKey;
-  Map<String, dynamic>? _earnings;
-  bool _earningsLoading = false;
-  bool _earningsLoaded = false;
-  String? _earningsError;
   List<Map<String, dynamic>> _categories = [];
   int? _categoryId;
   StreamSubscription<dynamic>? _locationSubscription;
@@ -63,9 +59,6 @@ class _DriverHomeScreenState extends State<DriverHomeScreen> {
           _locationSubscription = null;
           _online = false;
           _documents = [];
-          _earnings = null;
-          _earningsLoaded = false;
-          _earningsError = null;
         } else {
           _loadCategories();
           _loadDocuments();
@@ -105,183 +98,6 @@ class _DriverHomeScreenState extends State<DriverHomeScreen> {
       if (mounted) setState(() => _message = 'Vehicle options are temporarily unavailable. Please try again.');
     }
   }
-
-  Future<void> _loadEarnings({bool force = false}) async {
-    if (!QuickRideBackend.isInitialized || QuickRideAuth.currentUser == null ||
-        _earningsLoading || (_earningsLoaded && !force)) {
-      return;
-    }
-    _earningsLoading = true;
-    try {
-      final result = await _invoke('get_earnings');
-      if (!mounted) return;
-      setState(() {
-        _earnings = result;
-        _earningsLoaded = true;
-        _earningsError = null;
-      });
-    } catch (error) {
-      if (mounted) {
-        setState(() {
-          _earningsLoaded = true;
-          _earningsError = 'Earnings could not be loaded. Please refresh.';
-        });
-      }
-    } finally {
-      _earningsLoading = false;
-      if (mounted) setState(() {});
-    }
-  }
-
-  String _money(Object? value) {
-    final amount = value is num ? value.toDouble() : double.tryParse(value?.toString() ?? '');
-    return amount == null ? '₹—' : '₹' + amount.toStringAsFixed(2);
-  }
-
-  Widget _earningsCard() {
-    final totals = _earnings?['totals'] as Map<String, dynamic>? ?? {};
-    final inr = totals['INR'] as Map<String, dynamic>? ?? {};
-    final subscriptions = _earnings?['subscriptions'] as List<dynamic>? ?? [];
-    final payments = _earnings?['payments'] as List<dynamic>? ?? [];
-    final ledger = _earnings?['ledger'] as List<dynamic>? ?? [];
-    final recentRides = _earnings?['recent_completed_rides'] as List<dynamic>? ?? [];
-    final completedCount = _earnings?['completed_ride_count'] ?? 0;
-    final recentWindowCount = _earnings?['recent_window_ride_count'] ?? 0;
-    final latestSubscription = subscriptions.isEmpty
-        ? null
-        : Map<String, dynamic>.from(subscriptions.first as Map);
-    final latestPayment = payments.isEmpty
-        ? null
-        : Map<String, dynamic>.from(payments.first as Map);
-
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                Expanded(
-                  child: Text(
-                    'Earnings & settlements',
-                    style: Theme.of(context).textTheme.titleLarge,
-                  ),
-                ),
-                IconButton(
-                  tooltip: 'Refresh earnings',
-                  onPressed: _earningsLoading ? null : () => _loadEarnings(force: true),
-                  icon: _earningsLoading
-                      ? const SizedBox(
-                          width: 18,
-                          height: 18,
-                          child: CircularProgressIndicator(strokeWidth: 2),
-                        )
-                      : const Icon(Icons.refresh),
-                ),
-              ],
-            ),
-            if (_earningsError != null)
-              Text(
-                'Earnings could not be loaded: $_earningsError',
-                style: TextStyle(color: Theme.of(context).colorScheme.error),
-              )
-            else if (_earnings == null)
-              const LinearProgressIndicator()
-            else ...[
-              Text('Showing the latest $recentWindowCount of $completedCount completed rides'),
-              const SizedBox(height: 12),
-              Wrap(
-                spacing: 10,
-                runSpacing: 10,
-                children: [
-                  _earningMetric('Last 30 rides · fare', _money(inr['gross_fare'])),
-                  _earningMetric('Last 30 · commission', _money(inr['platform_commission'])),
-                  _earningMetric('After commission*', _money(inr['after_commission'])),
-                ],
-              ),
-              const SizedBox(height: 8),
-              Text(
-                '*Recent-ride accounting estimate only. This is not confirmation of a bank payout.',
-                style: Theme.of(context).textTheme.bodySmall,
-              ),
-              if (latestSubscription != null) ...[
-                const Divider(height: 24),
-                Text('Latest driver subscription', style: Theme.of(context).textTheme.titleMedium),
-                Text(
-                  '${_money(latestSubscription['amount'])} · ${latestSubscription['status'].toString().replaceAll('_', ' ')}',
-                ),
-                if (latestSubscription['period_end'] != null)
-                  Text(
-                    'Period ends ${DateTime.tryParse(latestSubscription['period_end'].toString())?.toLocal().toString().substring(0, 10) ?? latestSubscription['period_end']}',
-                    style: Theme.of(context).textTheme.bodySmall,
-                  ),
-              ],
-              if (latestPayment != null) ...[
-                const Divider(height: 24),
-                Text('Latest payment record', style: Theme.of(context).textTheme.titleMedium),
-                Text(
-                  '${_money(latestPayment['amount'])} · ${latestPayment['payment_purpose'].toString().replaceAll('_', ' ')}',
-                ),
-                Text(
-                  latestPayment['status'].toString().replaceAll('_', ' '),
-                  style: Theme.of(context).textTheme.bodySmall,
-                ),
-              ],
-              if (ledger.isNotEmpty) ...[
-                const Divider(height: 24),
-                Text('Recent ledger entries', style: Theme.of(context).textTheme.titleMedium),
-                ...ledger.take(3).map((item) {
-                  final entry = Map<String, dynamic>.from(item as Map);
-                  final sign = entry['direction'] == 'credit' ? '+' : '−';
-                  return ListTile(
-                    dense: true,
-                    contentPadding: EdgeInsets.zero,
-                    title: Text(entry['description']?.toString() ??
-                        entry['entry_type'].toString().replaceAll('_', ' ')),
-                    subtitle: Text(entry['status'].toString().replaceAll('_', ' ')),
-                    trailing: Text(sign + _money(entry['amount'])),
-                  );
-                }),
-              ],
-              if (recentRides.isNotEmpty) ...[
-                const Divider(height: 24),
-                Text('Recent completed rides', style: Theme.of(context).textTheme.titleMedium),
-                ...recentRides.take(3).map((item) {
-                  final ride = Map<String, dynamic>.from(item as Map);
-                  final date = DateTime.tryParse(ride['completed_at']?.toString() ?? '');
-                  return ListTile(
-                    dense: true,
-                    contentPadding: EdgeInsets.zero,
-                    title: Text('Ride ${ride['id'].toString().substring(0, 8)}'),
-                    subtitle: Text(date?.toLocal().toString().substring(0, 16) ?? 'Completed'),
-                    trailing: Text(_money(ride['final_fare'] ?? ride['estimated_fare'])),
-                  );
-                }),
-              ],
-            ],
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _earningMetric(String label, String value) => Container(
-        constraints: const BoxConstraints(minWidth: 100, maxWidth: 160),
-        padding: const EdgeInsets.all(10),
-        decoration: BoxDecoration(
-          color: Theme.of(context).colorScheme.surfaceContainerLow,
-          borderRadius: BorderRadius.circular(12),
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(label, style: Theme.of(context).textTheme.labelSmall),
-            const SizedBox(height: 4),
-            Text(value, style: Theme.of(context).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w800)),
-          ],
-        ),
-      );
 
   Future<Map<String, dynamic>> _invoke(
     String action, [
@@ -720,22 +536,6 @@ class _DriverHomeScreenState extends State<DriverHomeScreen> {
       }
     });
   }
-
-  Widget _previewTile(
-    IconData icon,
-    String title,
-    String subtitle, {
-    required String route,
-  }) =>
-      Card(
-        child: ListTile(
-          leading: CircleAvatar(child: Icon(icon)),
-          title: Text(title),
-          subtitle: Text(subtitle),
-          trailing: const Icon(Icons.chevron_right),
-          onTap: () => context.push(route),
-        ),
-      );
 
   Future<void> _signIn() async {
     if (!QuickRideBackend.isInitialized) {
