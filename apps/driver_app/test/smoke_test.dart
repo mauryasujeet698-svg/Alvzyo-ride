@@ -18,16 +18,13 @@ void main() {
     await tester.pump();
 
     expect(find.text('Alvzyo Driver'), findsOneWidget);
-    expect(find.text('Ready to accept rides?'), findsOneWidget);
-    expect(find.textContaining('Preview mode · Read only'), findsOneWidget);
+    expect(find.text('Ready to accept rides?'), findsNothing);
+    expect(find.textContaining('Preview mode · Read only'), findsNothing);
     expect(find.byKey(const ValueKey('alvzyo-driver-map-test-placeholder')), findsOneWidget);
-    await tester.scrollUntilVisible(
-      find.text('Sign in with Google'),
-      250,
-      scrollable: find.byType(Scrollable).first,
-    );
+    expect(find.text('Sign in to go online and receive nearby ride requests.'), findsOneWidget);
     expect(find.text('Sign in with Google'), findsOneWidget);
-    expect(find.text('Ride history'), findsOneWidget);
+    expect(find.text('My Rides'), findsOneWidget);
+    expect(find.byType(Drawer), findsNothing);
     expect(find.text('Quick-Ride backend is not configured.'), findsNothing);
   });
 }
