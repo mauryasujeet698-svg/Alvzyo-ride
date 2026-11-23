@@ -34,7 +34,7 @@ class DriverNavigationDrawer extends StatelessWidget {
               child: Align(
                 alignment: Alignment.bottomLeft,
                 child: Text(
-                  'Quick Ride Captain',
+                  'Alvzyo Driver',
                   style: TextStyle(
                     color: Colors.white,
                     fontSize: 22,
@@ -52,7 +52,7 @@ class DriverNavigationDrawer extends StatelessWidget {
             _entry(context, Icons.settings_outlined, 'Settings', '/section/settings'),
             _entry(context, Icons.support_agent_outlined, 'Help & support', '/section/support'),
             _entry(context, Icons.privacy_tip_outlined, 'Privacy policy', '/section/privacy'),
-            _entry(context, Icons.info_outline_rounded, 'About Quick Ride', '/section/about'),
+            _entry(context, Icons.info_outline_rounded, 'About Alvzyo Driver', '/section/about'),
             const Divider(),
             if (user == null)
               ListTile(
@@ -65,7 +65,7 @@ class DriverNavigationDrawer extends StatelessWidget {
                         Navigator.of(context).pop();
                         try {
                           await QuickRideAuth.signInWithGoogle(
-                            redirectTo: 'in.quickride.driver://login-callback',
+                            redirectTo: 'com.alvzyo.ride.driver://login-callback',
                           );
                         } catch (error) {
                           if (context.mounted) {
