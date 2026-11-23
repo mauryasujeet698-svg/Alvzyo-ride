@@ -299,7 +299,6 @@ class _QuickRideMapViewState extends State<QuickRideMapView> {
   late final fm.MapController _mapController;
   QuickRideMapController? _controller;
   bool _mapReady = false;
-  bool _tileError = false;
   LatLng get _initial => widget.currentPosition ?? widget.initialCenter ?? const LatLng(25.4358, 81.8463);
 
   @override
@@ -311,7 +310,7 @@ class _QuickRideMapViewState extends State<QuickRideMapView> {
   void _onMapReady() {
     if (!mounted || _mapReady) return;
     _controller = QuickRideMapController._(_mapController);
-    setState(() { _mapReady = true; _tileError = false; });
+    setState(() { _mapReady = true; });
     widget.onMapCreated?.call(_controller!);
   }
 
@@ -401,7 +400,7 @@ class _QuickRideMapViewState extends State<QuickRideMapView> {
             )]),
           fm.MarkerLayer(markers: _markers()),
           fm.RichAttributionWidget(
-            alignment: fm.AlignmentDirectional.bottomEnd,
+            alignment: AlignmentDirectional.bottomEnd,
             attributions: const [fm.TextSourceAttribution('© OpenStreetMap contributors')],
           ),
         ],
