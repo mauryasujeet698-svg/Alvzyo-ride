@@ -40,7 +40,7 @@ Deno.test("shared Auto planner creates six ordered stops for three bookings", as
   const legs = [createLeg("ride-a", 0), createLeg("ride-b", 1), createLeg("ride-c", 2)];
   const route = await calculateSharedAutoRoute(
     legs,
-    "pk.test-mapbox-token",
+    "https://router.project-osrm.org",
     1000,
     60,
     mockTableFetcher(6, 60),
@@ -68,7 +68,7 @@ Deno.test("shared Auto planner rejects a route exceeding detour and extra-time l
   const legs = [createLeg("ride-a", 0), createLeg("ride-b", 1)];
   const route = await calculateSharedAutoRoute(
     legs,
-    "pk.test-mapbox-token",
+    "https://router.project-osrm.org",
     10,
     1,
     mockTableFetcher(4, 120),
@@ -79,7 +79,7 @@ Deno.test("shared Auto planner rejects a route exceeding detour and extra-time l
 Deno.test("shared Auto planner does not try to match a single booking", async () => {
   const route = await calculateSharedAutoRoute(
     [createLeg("ride-a", 0)],
-    "pk.test-mapbox-token",
+    "https://router.project-osrm.org",
     40,
     15,
     async () => {
@@ -87,4 +87,26 @@ Deno.test("shared Auto planner does not try to match a single booking", async ()
     },
   );
   if (route !== null) throw new Error("A single booking should start its own shared Auto trip");
+});
+Deno.test("shared Auto planner requests the OSRM table API without a token", async () => {
+  let requestedUrl = "";
+  const legs = [createLeg("ride-a", 0), createLeg("ride-b", 1)];
+  const fetchTable = mockTableFetcher(4, 60);
+  await calculateSharedAutoRoute(
+    legs,
+    "https://router.project-osrm.org",
+    1000,
+    60,
+    async (input, init) => {
+      requestedUrl = String(input);
+      return fetchTable(input, init);
+    },
+  );
+  const url = new URL(requestedUrl);
+  if (url.pathname !== "/table/v1/driving/80,25;80.02,25.02;80.01,25.01;80.03,25.03") {
+    throw new Error(`Unexpected OSRM table path: ${url.pathname}`);
+  }
+  if (url.searchParams.has("access_token")) {
+    throw new Error("OSRM requests must not require or send a Mapbox access token");
+  }
 });
