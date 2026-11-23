@@ -9,6 +9,7 @@ import 'package:quick_ride_core/quick_ride_core.dart';
 import 'package:quick_ride_design_system/quick_ride_design_system.dart';
 import 'package:quick_ride_notifications/quick_ride_notifications.dart';
 import 'src/admin_home_screen.dart';
+import 'src/admin_dashboard_screen.dart';
 import 'src/operations_screen.dart';
 import 'src/notification_center_screen.dart';
 import 'src/admin_navigation_drawer.dart';
@@ -188,8 +189,8 @@ class QuickRideAdminApp extends StatelessWidget {
   const QuickRideAdminApp({super.key});
 
   static final router = GoRouter(routes: [
-    GoRoute(path: '/', builder: (_, __) => const AdminOperationsScreen()),
-    GoRoute(path: '/dashboard', builder: (_, __) => const AdminOperationsScreen()),
+    GoRoute(path: '/', builder: (_, __) => const AdminDashboardScreen()),
+    GoRoute(path: '/dashboard', builder: (_, __) => const AdminDashboardScreen()),
     GoRoute(path: '/operations', builder: (_, __) => const AdminOperationsScreen()),
     GoRoute(path: '/service-areas', builder: (_, __) => const AdminHomeScreen()),
     GoRoute(path: '/notifications', builder: (_, __) => const AdminNotificationCenterScreen()),
