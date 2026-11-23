@@ -6,6 +6,7 @@ import 'package:quick_ride_auth/quick_ride_auth.dart';
 import 'package:quick_ride_backend/quick_ride_backend.dart';
 import 'admin_navigation_drawer.dart';
 import 'admin_bottom_navigation.dart';
+import 'admin_access.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 class AdminOperationsScreen extends StatefulWidget {
@@ -25,34 +26,36 @@ class _AdminOperationsScreenState extends State<AdminOperationsScreen> {
   StreamSubscription<dynamic>? _authSubscription;
   Timer? _refreshTimer;
 
-  bool get _isDesignatedAdmin =>
-      QuickRideAuth.currentUser?.email?.toLowerCase() == 'mauryasujeet698@gmail.com';
+  bool _hasAdminAccess = false;
 
   @override
   void initState() {
     super.initState();
     if (QuickRideBackend.isInitialized) {
-      if (_isDesignatedAdmin) {
-        unawaited(_refresh());
-        _startRefreshTimer();
-      }
+      unawaited(_refreshAdminAccess());
       _authSubscription = QuickRideAuth.authStateChanges.listen((_) {
         if (!mounted) return;
-        if (_isDesignatedAdmin) {
-          setState(() {});
-          _startRefreshTimer();
-          if (_summary == null && !_busy) unawaited(_refresh());
-        } else {
-          _refreshTimer?.cancel();
-          _refreshTimer = null;
-          setState(() {
-            _summary = null;
-            _drivers = [];
-            _pincodeRequests = [];
-            _supportTickets = [];
-            _safetyEvents = [];
-          });
-        }
+        unawaited(_refreshAdminAccess());
+      });
+    }
+  }
+
+  Future<void> _refreshAdminAccess() async {
+    final allowed = await AdminAccess.verify();
+    if (!mounted) return;
+    setState(() => _hasAdminAccess = allowed);
+    if (allowed) {
+      _startRefreshTimer();
+      if (_summary == null && !_busy) unawaited(_refresh());
+    } else {
+      _refreshTimer?.cancel();
+      _refreshTimer = null;
+      setState(() {
+        _summary = null;
+        _drivers = [];
+        _pincodeRequests = [];
+        _supportTickets = [];
+        _safetyEvents = [];
       });
     }
   }
@@ -359,7 +362,7 @@ class _AdminOperationsScreenState extends State<AdminOperationsScreen> {
 
   @override
   Widget build(BuildContext context) {
-    if (!QuickRideBackend.isInitialized || !_isDesignatedAdmin) {
+    if (!QuickRideBackend.isInitialized || !_hasAdminAccess) {
       return _previewScreen();
     }
     final summary = _summary ?? const <String, dynamic>{};

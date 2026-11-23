@@ -109,7 +109,7 @@ class _AdminNotificationCenterScreenState
   Widget build(BuildContext context) {
     final colors = Theme.of(context).colorScheme;
     final hasAdminSession = QuickRideBackend.isInitialized &&
-        QuickRideAuth.currentUser?.email?.toLowerCase() == 'mauryasujeet698@gmail.com';
+        QuickRideAuth.currentUser != null;
     return Scaffold(
       drawer: const AdminNavigationDrawer(),
       appBar: AppBar(title: const Text('Notification centre')),

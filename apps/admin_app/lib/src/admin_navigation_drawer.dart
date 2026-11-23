@@ -155,7 +155,7 @@ class AdminInfoScreen extends StatelessWidget {
       ),
     };
     final page = pages[section] ?? pages['about']!;
-    final selectedTab = section == 'profile' ? 4 : 4;
+    const selectedTab = 4;
     return Scaffold(
       bottomNavigationBar: AdminBottomNavigationBar(currentIndex: selectedTab),
       appBar: AppBar(
