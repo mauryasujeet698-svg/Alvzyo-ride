@@ -1,4 +1,4 @@
-name: Build Alvzyo Customer Android Release APK
+name: Build Alvzyo Customer, Driver and Admin Android QA APKs
 on:
   pull_request:
     branches: [main]
@@ -42,7 +42,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          for app in customer; do
+          for app in customer driver admin; do
             temp_dir="$(mktemp -d)"
             flutter create --empty --project-name "$app" --org com.alvzyo.ride --platforms android "$temp_dir"
             cp -R "$temp_dir/android" "apps/${app}_app/android"
@@ -199,7 +199,7 @@ jobs:
         run: |
           set -euo pipefail
           mkdir -p dist
-          for app in customer; do
+          for app in customer driver admin; do
             firebase_app_id=""
             (
               cd "apps/${app}_app"
@@ -266,7 +266,7 @@ jobs:
                 touch ../../dist/BUILD_FAILED
                 exit 0
               fi
-              if [[ "${app}" == "customer" && -z "$ANDROID_KEYSTORE_BASE64" && -f "$HOME/.android/debug.keystore" ]]; then
+              if [[ -z "$ANDROID_KEYSTORE_BASE64" && -f "$HOME/.android/debug.keystore" ]]; then
                 keytool -list -v -keystore "$HOME/.android/debug.keystore" -storepass android -alias androiddebugkey 2>/dev/null | awk '/SHA1:|SHA256:/{print "Android debug signing " $1 " " $2}'
               fi
             )
@@ -310,10 +310,10 @@ jobs:
           cat dist/APK_CONTENT_BREAKDOWN.txt
       - uses: actions/upload-artifact@v4
         with:
-          name: alvzyo-customer-android-apks
+          name: alvzyo-android-apks
           path: dist/*
           if-no-files-found: error
-          retention-days: 1
+          retention-days: 14
 
       - name: Enforce 25 MB APK limit
         if: always()
