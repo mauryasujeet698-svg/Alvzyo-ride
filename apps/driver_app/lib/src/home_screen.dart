@@ -627,8 +627,8 @@ class _DriverHomeScreenState extends State<DriverHomeScreen> {
           child: Stack(
             children: [
               QuickRideMapView(
-                userAgentPackageName: 'com.quickride.driver',
-                key: const ValueKey('quick-ride-captain-map'),
+                userAgentPackageName: 'com.alvzyo.ride.driver',
+                key: const ValueKey('alvzyo-driver-map'),
                 initialCenter: _currentPosition ?? const LatLng(20.5937, 78.9629),
                 initialZoom: _currentPosition == null ? 4.5 : 15.5,
                 currentPosition: _currentPosition,
@@ -1215,9 +1215,9 @@ class _DriverHomeScreenState extends State<DriverHomeScreen> {
         title: const Text('Emergency assistance'),
         content: const Text(
           'For an immediate emergency in India, call 112. '
-          'Quick-Ride will try to record an SOS event for this assigned ride, '
+          'Alvzyo will try to record an SOS event for this assigned ride, '
           'then open your phone dialer. You must confirm the call in the dialer. '
-          'Quick-Ride is not an emergency dispatch service.',
+          'Alvzyo is not an emergency dispatch service.',
         ),
         actions: [
           TextButton(
