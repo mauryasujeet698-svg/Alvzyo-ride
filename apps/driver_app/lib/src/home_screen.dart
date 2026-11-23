@@ -12,7 +12,6 @@ import 'package:quick_ride_maps/quick_ride_maps.dart';
 import 'driver_bottom_navigation.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:url_launcher/url_launcher.dart';
-import 'driver_navigation_drawer.dart';
 
 class DriverHomeScreen extends StatefulWidget {
   const DriverHomeScreen({super.key});
@@ -567,62 +566,40 @@ class _DriverHomeScreenState extends State<DriverHomeScreen> {
   }
 
   Widget _previewScreen() {
-    final colors = Theme.of(context).colorScheme;
     return Scaffold(
-      drawer: const DriverNavigationDrawer(),
       appBar: AppBar(
         title: const Text('Alvzyo Driver'),
       ),
-      body: ListView(
-        padding: const EdgeInsets.all(18),
+      body: Column(
         children: [
-          Text(
-            'Ready to accept rides?',
-            style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-                  fontWeight: FontWeight.w800,
-                ),
-          ),
-          const SizedBox(height: 8),
-          Text(
-            'Sign in to check your driver status and receive nearby ride requests.',
-            style: Theme.of(context).textTheme.bodyLarge,
-          ),
-          const SizedBox(height: 14),
-          _captainMap(height: 250),
-          const SizedBox(height: 14),
-          Card(
-            color: colors.secondaryContainer,
+          Expanded(child: _captainMap(height: double.infinity)),
+          SafeArea(
+            top: false,
             child: Padding(
-              padding: const EdgeInsets.all(16),
-              child: Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
+              padding: const EdgeInsets.fromLTRB(16, 10, 16, 12),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                mainAxisSize: MainAxisSize.min,
                 children: [
-                  Icon(Icons.visibility_outlined, color: colors.onSecondaryContainer),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Text(
-                      'Preview mode · Read only\n'
-                      'Sign in with your approved driver account to go online, receive ride offers and manage active trips.',
-                      style: TextStyle(color: colors.onSecondaryContainer),
-                    ),
+                  Text(
+                    'Sign in to go online and receive nearby ride requests.',
+                    style: Theme.of(context).textTheme.bodyMedium,
+                  ),
+                  const SizedBox(height: 8),
+                  FilledButton.icon(
+                    onPressed: _busy ? null : _signIn,
+                    icon: _busy
+                        ? const SizedBox(
+                            width: 18,
+                            height: 18,
+                            child: CircularProgressIndicator(strokeWidth: 2),
+                          )
+                        : const Icon(Icons.login),
+                    label: Text(_busy ? 'Signing in…' : 'Sign in with Google'),
                   ),
                 ],
               ),
             ),
-          ),
-          const SizedBox(height: 18),
-          FilledButton.icon(
-            onPressed: _busy ? null : _signIn,
-            icon: _busy
-                ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2))
-                : const Icon(Icons.login),
-            label: Text(_busy ? 'Signing in…' : 'Sign in with Google'),
-          ),
-          const SizedBox(height: 10),
-          OutlinedButton.icon(
-            onPressed: () => context.push('/section/rides'),
-            icon: const Icon(Icons.route_outlined),
-            label: const Text('Ride history'),
           ),
         ],
       ),
@@ -647,7 +624,6 @@ class _DriverHomeScreenState extends State<DriverHomeScreen> {
         .from('rides').stream(primaryKey: ['id']).eq('driver_id', user.id);
 
     return Scaffold(
-      drawer: const DriverNavigationDrawer(),
       appBar: AppBar(
         title: const Text('Alvzyo Driver'),
         actions: [
