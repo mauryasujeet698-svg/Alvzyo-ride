@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import 'package:quick_ride_auth/quick_ride_auth.dart';
 import 'package:quick_ride_backend/quick_ride_backend.dart';
 import 'admin_navigation_drawer.dart';
+import 'admin_bottom_navigation.dart';
 
 class AdminHomeScreen extends StatefulWidget {
   const AdminHomeScreen({super.key});
@@ -494,14 +495,16 @@ class _AdminHomeScreenState extends State<AdminHomeScreen> {
   Widget _previewTile(
     IconData icon,
     String title,
-    String description,
-  ) =>
+    String description, {
+    required String route,
+  }) =>
       Card(
         child: ListTile(
           leading: CircleAvatar(child: Icon(icon)),
           title: Text(title),
           subtitle: Text(description),
           trailing: const Icon(Icons.chevron_right),
+          onTap: () => context.push(route),
         ),
       );
 
@@ -568,22 +571,22 @@ class _AdminHomeScreenState extends State<AdminHomeScreen> {
           _previewTile(
             Icons.location_city_outlined,
             'Service areas and pincodes',
-            'Create operating areas, add pincodes and manage boundaries',
+            'Create operating areas, add pincodes and manage boundaries',, route: '/service-areas'
           ),
           _previewTile(
             Icons.directions_car_outlined,
             'Vehicle categories',
-            'Create and enable bike, auto, car and other ride categories',
+            'Create and enable bike, auto, car and other ride categories',, route: '/service-areas'
           ),
           _previewTile(
             Icons.currency_rupee_rounded,
             'Fare and commercial rules',
-            'Configure base fare, distance/time rates and minimum fare',
+            'Configure base fare, distance/time rates and minimum fare',, route: '/service-areas'
           ),
           _previewTile(
             Icons.business_center_outlined,
             'Driver business models',
-            'Set subscription, commission or hybrid model per pincode',
+            'Set subscription, commission or hybrid model per pincode',, route: '/service-areas'
           ),
           const SizedBox(height: 14),
           Text('Platform operations',
@@ -592,22 +595,22 @@ class _AdminHomeScreenState extends State<AdminHomeScreen> {
           _previewTile(
             Icons.verified_user_outlined,
             'Driver and KYC approvals',
-            'Review vehicle details, documents and service-pincode requests',
+            'Review vehicle details, documents and service-pincode requests',, route: '/operations'
           ),
           _previewTile(
             Icons.route_outlined,
             'Ride operations',
-            'Review active rides, driver assignment and operational status',
+            'Review active rides, driver assignment and operational status',, route: '/operations'
           ),
           _previewTile(
             Icons.support_agent_outlined,
             'Customer support',
-            'Review ride-linked support requests and resolutions',
+            'Review ride-linked support requests and resolutions',, route: '/operations'
           ),
           _previewTile(
             Icons.sos_outlined,
             'Safety and SOS queue',
-            'Review driver safety events and emergency escalations',
+            'Review driver safety events and emergency escalations',, route: '/operations'
           ),
           ListTile(
             leading: const Icon(Icons.notifications_active_outlined),
@@ -634,6 +637,7 @@ class _AdminHomeScreenState extends State<AdminHomeScreen> {
           ),
         ],
       ),
+      bottomNavigationBar: const AdminBottomNavigationBar(currentIndex: 2),
     );
   }
 
@@ -659,6 +663,7 @@ class _AdminHomeScreenState extends State<AdminHomeScreen> {
           IconButton(onPressed: QuickRideAuth.signOut, icon: const Icon(Icons.logout)),
         ],
       ),
+      bottomNavigationBar: const AdminBottomNavigationBar(currentIndex: 2),
       body: RefreshIndicator(
         onRefresh: load,
         child: ListView(

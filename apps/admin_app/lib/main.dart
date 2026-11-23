@@ -11,6 +11,7 @@ import 'src/admin_home_screen.dart';
 import 'src/operations_screen.dart';
 import 'src/notification_center_screen.dart';
 import 'src/admin_navigation_drawer.dart';
+import 'src/admin_bottom_navigation.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -186,6 +187,7 @@ class QuickRideAdminApp extends StatelessWidget {
 
   static final router = GoRouter(routes: [
     GoRoute(path: '/', builder: (_, __) => const AdminOperationsScreen()),
+    GoRoute(path: '/dashboard', builder: (_, __) => const AdminOperationsScreen()),
     GoRoute(path: '/operations', builder: (_, __) => const AdminOperationsScreen()),
     GoRoute(path: '/service-areas', builder: (_, __) => const AdminHomeScreen()),
     GoRoute(path: '/notifications', builder: (_, __) => const AdminNotificationCenterScreen()),

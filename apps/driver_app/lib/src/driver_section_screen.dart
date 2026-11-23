@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:quick_ride_auth/quick_ride_auth.dart';
 import 'package:quick_ride_backend/quick_ride_backend.dart';
+import 'driver_bottom_navigation.dart';
+import 'driver_navigation_drawer.dart';
 
 class DriverSectionScreen extends StatefulWidget {
   const DriverSectionScreen({super.key, required this.section});
@@ -189,7 +191,15 @@ class _DriverSectionScreenState extends State<DriverSectionScreen> {
     final page = _copy[widget.section] ?? _copy['about']!;
     final signedIn = QuickRideBackend.isInitialized && QuickRideAuth.currentUser != null;
     final needsData = const {'rides', 'earnings', 'documents', 'profile'}.contains(widget.section);
+    final selectedTab = switch (widget.section) {
+      'rides' => 1,
+      'earnings' => 2,
+      'profile' => 3,
+      _ => 3,
+    };
     return Scaffold(
+      drawer: const DriverNavigationDrawer(),
+      bottomNavigationBar: DriverBottomNavigationBar(currentIndex: selectedTab),
       appBar: AppBar(
         title: Text(page.title),
         leading: IconButton(

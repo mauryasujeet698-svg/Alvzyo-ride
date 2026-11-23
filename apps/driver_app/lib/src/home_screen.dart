@@ -9,6 +9,7 @@ import 'package:go_router/go_router.dart';
 import 'package:quick_ride_auth/quick_ride_auth.dart';
 import 'package:quick_ride_backend/quick_ride_backend.dart';
 import 'package:quick_ride_maps/quick_ride_maps.dart';
+import 'driver_bottom_navigation.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'driver_navigation_drawer.dart';
@@ -868,6 +869,7 @@ class _DriverHomeScreenState extends State<DriverHomeScreen> {
           ),
         ],
       ),
+      bottomNavigationBar: const DriverBottomNavigationBar(currentIndex: 0),
     );
   }
 
@@ -999,6 +1001,7 @@ class _DriverHomeScreenState extends State<DriverHomeScreen> {
           );
         },
       ),
+      bottomNavigationBar: const DriverBottomNavigationBar(currentIndex: 0),
     );
   }
 

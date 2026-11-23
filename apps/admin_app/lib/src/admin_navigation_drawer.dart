@@ -43,7 +43,7 @@ class AdminNavigationDrawer extends StatelessWidget {
                 ),
               ),
             ),
-            _entry(context, Icons.dashboard_outlined, 'Dashboard', '/'),
+            _entry(context, Icons.dashboard_outlined, 'Dashboard', '/dashboard'),
             _entry(context, Icons.monitor_heart_outlined, 'Operations', '/operations'),
             _entry(context, Icons.location_city_outlined, 'Service areas & fares', '/service-areas'),
             _entry(context, Icons.notifications_active_outlined, 'Notifications', '/notifications'),
@@ -155,7 +155,9 @@ class AdminInfoScreen extends StatelessWidget {
       ),
     };
     final page = pages[section] ?? pages['about']!;
+    final selectedTab = section == 'profile' ? 4 : 4;
     return Scaffold(
+      bottomNavigationBar: AdminBottomNavigationBar(currentIndex: selectedTab),
       appBar: AppBar(
         title: Text(page.title),
         leading: IconButton(

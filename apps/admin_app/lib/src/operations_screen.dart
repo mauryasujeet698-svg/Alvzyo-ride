@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import 'package:quick_ride_auth/quick_ride_auth.dart';
 import 'package:quick_ride_backend/quick_ride_backend.dart';
 import 'admin_navigation_drawer.dart';
+import 'admin_bottom_navigation.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 class AdminOperationsScreen extends StatefulWidget {
@@ -286,6 +287,7 @@ class _AdminOperationsScreenState extends State<AdminOperationsScreen> {
               ),
           ],
         ),
+        bottomNavigationBar: const AdminBottomNavigationBar(currentIndex: 1),
         body: ListView(
           padding: const EdgeInsets.all(18),
           children: [
@@ -366,9 +368,10 @@ class _AdminOperationsScreenState extends State<AdminOperationsScreen> {
       drawer: const AdminNavigationDrawer(),
       appBar: AppBar(
         title: const Text('Operations'),
-        leading: IconButton(onPressed: () => context.pop(), icon: const Icon(Icons.arrow_back)),
+        leading: Builder(builder: (context) => IconButton(onPressed: () => Scaffold.of(context).openDrawer(), icon: const Icon(Icons.menu))),
         actions: [IconButton(onPressed: _busy ? null : _refresh, icon: const Icon(Icons.refresh))],
       ),
+      bottomNavigationBar: const AdminBottomNavigationBar(currentIndex: 1),
       body: RefreshIndicator(
         onRefresh: _refresh,
         child: ListView(
