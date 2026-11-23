@@ -233,7 +233,7 @@ class _AdminNotificationCenterScreenState
                   if (!hasAdminSession) ...[
                     const SizedBox(height: 8),
                     Text(
-                      'Sign in with an active Admin or Operations account to use this tool.',
+                      'Sign in with an active Admin account to use this tool.',
                       style: TextStyle(color: colors.error),
                     ),
                   ],
