@@ -52,7 +52,7 @@ export async function calculateSharedAutoRoute(
     },
   ]);
   const coordinateString = nodes.map((node) => `${node.longitude},${node.latitude}`).join(";");
-  const normalizedBaseUrl = osrmBaseUrl.replace(/\\/+$/, "");
+  const normalizedBaseUrl = osrmBaseUrl.replace(/\/+$/, "");
   const tableUrl = new URL(`${normalizedBaseUrl}/table/v1/driving/${coordinateString}`);
   if (!["http:", "https:"].includes(tableUrl.protocol)) {
     throw new Error("OSRM routing URL must use HTTP or HTTPS");
