@@ -405,7 +405,7 @@ Deno.serve(async (req: Request) => {
     });
   }
 
-  const mapboxToken = Deno.env.get("MAPBOX_ACCESS_TOKEN") ?? "";
+  const osrmBaseUrl = (Deno.env.get("OSRM_BASE_URL") ?? "https://router.project-osrm.org").replace(/\/+$/, "");
   const pincode = body.pincode;
   const categoryId = Number(body.vehicleCategoryId);
   const pickup = body.pickup;
@@ -442,14 +442,19 @@ Deno.serve(async (req: Request) => {
     }
 
     const coords = `${pickup.longitude},${pickup.latitude};${destination.longitude},${destination.latitude}`;
-    if (!mapboxToken.startsWith("pk.") && !mapboxToken.startsWith("sk.")) {
-      return error(503, "MAPBOX_NOT_CONFIGURED", "Mapbox routing is not configured on the ride service. Set the MAPBOX_ACCESS_TOKEN Edge Function secret.");
+    let routeUrl: URL;
+    try {
+      routeUrl = new URL(`${osrmBaseUrl}/route/v1/driving/${coords}`);
+    } catch {
+      return error(503, "ROUTE_SERVICE_NOT_CONFIGURED", "The OSRM routing service URL is invalid");
     }
-    const routeUrl = new URL(`https://api.mapbox.com/directions/v5/mapbox/driving/${coords}`);
+    if (!["http:", "https:"].includes(routeUrl.protocol)) {
+      return error(503, "ROUTE_SERVICE_NOT_CONFIGURED", "The OSRM routing service must use HTTP or HTTPS");
+    }
     routeUrl.searchParams.set("overview", "full");
     routeUrl.searchParams.set("geometries", "geojson");
     routeUrl.searchParams.set("steps", "false");
-    routeUrl.searchParams.set("access_token", mapboxToken);
+    routeUrl.searchParams.set("alternatives", "false");
 
     const routeResponse = await fetch(routeUrl, {
       headers: {
@@ -501,7 +506,7 @@ Deno.serve(async (req: Request) => {
       estimatedFare = Math.round(privateEstimatedFare * perSeatPercent / 100 * passengerCount * 100) / 100;
     }
     const breakdown = {
-      provider: "mapbox-directions",
+      provider: "osrm",
       distance_m: distanceM,
       duration_s: durationS,
       base_fare: base,
@@ -643,7 +648,7 @@ Deno.serve(async (req: Request) => {
         try {
           routePlan = await calculateSharedAutoRoute(
             allLegs,
-            mapboxToken,
+            osrmBaseUrl,
             Number(sharedConfig?.max_detour_percent ?? 40),
             Number(sharedConfig?.max_extra_minutes ?? 15),
           );
