@@ -43,8 +43,8 @@ def main() -> int:
 
     app_labels = {
         "customer": "Alvzyo ride",
-        "driver": "Quick Ride Captain",
-        "admin": "Admin",
+        "driver": "Alvzyo Driver",
+        "admin": "Alvzyo Admin",
     }
     tree = ET.parse(manifest_path)
     root = tree.getroot()
