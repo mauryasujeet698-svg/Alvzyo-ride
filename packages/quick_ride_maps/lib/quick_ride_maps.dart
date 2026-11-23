@@ -303,6 +303,7 @@ class _QuickRideMapViewState extends State<QuickRideMapView> {
   late final fm.MapController _mapController;
   QuickRideMapController? _controller;
   bool _mapReady = false;
+  bool _tileError = false;
   LatLng get _initial => widget.currentPosition ?? widget.initialCenter ?? const LatLng(25.4358, 81.8463);
 
   @override
