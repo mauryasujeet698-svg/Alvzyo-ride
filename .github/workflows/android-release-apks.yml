@@ -171,7 +171,7 @@ jobs:
             echo "::error::GOOGLE_WEB_CLIENT_ID is missing."
             exit 1
           fi
-          if [[ ! "$GOOGLE_WEB_CLIENT_ID" =~ ^[0-9]+-[A-Za-z0-9_-]+\\.apps\\.googleusercontent\\.com$ ]]; then
+          if [[ ! "$GOOGLE_WEB_CLIENT_ID" =~ ^[0-9]+-[A-Za-z0-9_-]+\.apps\.googleusercontent\.com$ ]]; then
             echo "::error::GOOGLE_WEB_CLIENT_ID is not a valid-looking Web OAuth client ID."
             exit 1
           fi
@@ -183,7 +183,7 @@ jobs:
             fi
           done
           echo "Google OAuth client and permanent release signing configuration are present."
-      - name: Build optimized ABI-specific APKs
+      - name: Build complete universal release APKs
         shell: bash
         run: |
           set -euo pipefail
@@ -269,7 +269,7 @@ jobs:
             echo "Alvzyo Android release build"
             echo "Version: 1.0.${GITHUB_RUN_NUMBER} (${GITHUB_RUN_NUMBER})"
             echo "Signing: permanent Android release keystore"
-            find dist -type f -name '*.apk' -printf '%p %s bytes\\n' | sort
+            find dist -type f -name '*.apk' -printf '%p %s bytes\n' | sort
           } > dist/RELEASE_INFO.txt
           (cd dist && find . -type f -name '*.apk' -print0 | sort -z | xargs -0 sha256sum) > dist/SHA256SUMS.txt
           cat dist/RELEASE_INFO.txt
