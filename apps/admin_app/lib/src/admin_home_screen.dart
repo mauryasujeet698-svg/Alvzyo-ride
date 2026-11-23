@@ -650,11 +650,7 @@ class _AdminHomeScreenState extends State<AdminHomeScreen> {
           ),
           const SizedBox(height: 8),
           FilledButton.icon(
-            onPressed: QuickRideBackend.isInitialized
-                ? () => QuickRideAuth.signInWithGoogle(
-                      redirectTo: 'in.quickride.admin://login-callback',
-                    )
-                : null,
+            onPressed: QuickRideBackend.isInitialized && !_signInBusy ? _signIn : null,
             icon: _signInBusy ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2)) : const Icon(Icons.login),
             label: Text(_signInBusy ? 'Signing in…' : 'Sign in to manage Alvzyo'),
           ),
@@ -702,7 +698,7 @@ class _AdminHomeScreenState extends State<AdminHomeScreen> {
             const SizedBox(height: 20),
             Text('Vehicle categories', style: Theme.of(context).textTheme.titleLarge),
             const SizedBox(height: 6),
-            const Text('Create the vehicle types offered on Quick-Ride. Enable a category only when it is ready for bookings.'),
+            const Text('Create the vehicle types offered on Alvzyo. Enable a category only when it is ready for bookings.'),
             TextField(
               controller: categoryCode,
               textCapitalization: TextCapitalization.none,
