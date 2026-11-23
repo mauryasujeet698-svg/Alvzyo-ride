@@ -56,7 +56,7 @@ class _QuickRideAdminBootstrapState extends State<QuickRideAdminBootstrap> {
       await QuickRideBackend.initialize(environment);
       if (!QuickRideBackend.isInitialized) {
         throw StateError(
-          'Quick-Ride could not initialize its backend. Check the app configuration and try again.',
+          'Alvzyo could not initialize its backend. Check the app configuration and try again.',
         );
       }
 
@@ -82,7 +82,7 @@ class _QuickRideAdminBootstrapState extends State<QuickRideAdminBootstrap> {
         QuickRideAdminApp.messengerKey.currentState?.showSnackBar(
           SnackBar(
             content: Text(
-              '${notification.title ?? 'Quick-Ride'}\n'
+              '${notification.title ?? 'Alvzyo'}\n'
               '${notification.body ?? 'You have an operations update.'}',
             ),
             action: SnackBarAction(
@@ -204,7 +204,7 @@ class QuickRideAdminApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) => MaterialApp.router(
         scaffoldMessengerKey: messengerKey,
-        title: 'Admin',
+        title: 'Alvzyo Admin',
         theme: QuickRideTheme.light(),
         darkTheme: QuickRideTheme.dark(),
         routerConfig: router,
