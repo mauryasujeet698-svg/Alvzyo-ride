@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:quick_ride_backend/quick_ride_backend.dart';
+import 'package:quick_ride_auth/quick_ride_auth.dart';
 import 'package:quick_ride_core/quick_ride_core.dart';
 import 'package:quick_ride_design_system/quick_ride_design_system.dart';
 import 'package:quick_ride_notifications/quick_ride_notifications.dart';
@@ -62,6 +63,7 @@ class _QuickRideAdminBootstrapState extends State<QuickRideAdminBootstrap> {
       // Push notifications are optional for opening the Admin app. Their
       // initializer handles its own failures and must not block the UI.
       await QuickRideNotifications.initialize(appRole: 'admin');
+        QuickRideAuth.beforeSignOutCleanup = QuickRideNotifications.unregisterCurrentDevice;
 
       await _openedSubscription?.cancel();
       _openedSubscription = QuickRideNotifications.openedMessages.listen((message) {

@@ -5,6 +5,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:quick_ride_backend/quick_ride_backend.dart';
+import 'package:quick_ride_auth/quick_ride_auth.dart';
 import 'package:quick_ride_core/quick_ride_core.dart';
 import 'package:quick_ride_design_system/quick_ride_design_system.dart';
 import 'package:quick_ride_notifications/quick_ride_notifications.dart';
@@ -48,6 +49,7 @@ class _QuickRideDriverBootstrapState extends State<QuickRideDriverBootstrap> {
       if (QuickRideBackend.isInitialized) {
         // Notifications are optional for browsing and onboarding.
         await QuickRideNotifications.initialize(appRole: 'driver');
+        QuickRideAuth.beforeSignOutCleanup = QuickRideNotifications.unregisterCurrentDevice;
         _openedSubscription =
             QuickRideNotifications.openedMessages.listen(_handleOpenedMessage);
         _foregroundSubscription =

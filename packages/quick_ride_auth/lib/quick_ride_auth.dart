@@ -1,7 +1,6 @@
 import 'package:flutter/foundation.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 import 'package:quick_ride_backend/quick_ride_backend.dart';
-import 'package:quick_ride_notifications/quick_ride_notifications.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 class QuickRideAuth {
@@ -11,6 +10,10 @@ class QuickRideAuth {
       String.fromEnvironment('GOOGLE_WEB_CLIENT_ID');
   static final GoogleSignIn _googleSignIn = GoogleSignIn.instance;
   static Future<void>? _googleInitialization;
+
+  /// Optional app-provided cleanup for push registrations before sign-out.
+  /// Keeping this callback avoids coupling authentication to a push provider.
+  static Future<void> Function()? beforeSignOutCleanup;
 
   static User? get currentUser =>
       QuickRideBackend.isInitialized
@@ -88,7 +91,7 @@ class QuickRideAuth {
       // Local Supabase sign-out must still complete if Google cleanup fails.
     }
     try {
-      await QuickRideNotifications.unregisterCurrentDevice();
+      await beforeSignOutCleanup?.call();
     } catch (_) {
       // A push-token cleanup failure must not leave the user signed in.
     }
