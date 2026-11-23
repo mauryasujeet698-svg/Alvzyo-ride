@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:go_router/go_router.dart';
 import 'package:quick_ride_auth/quick_ride_auth.dart';
 import 'package:quick_ride_backend/quick_ride_backend.dart';
 import 'driver_bottom_navigation.dart';
@@ -46,7 +45,7 @@ class _DriverSectionScreenState extends State<DriverSectionScreen> {
     'support': (
       title: 'Help & support',
       intro: 'Guidance for using Alvzyo Driver.',
-      details: ['Keep GPS and notifications enabled while online', 'Use the ride-linked safety controls during an active trip', 'For account or document problems, use the driver support channel provided by Quick Ride operations'],
+      details: ['Keep GPS and notifications enabled while online', 'Use the ride-linked safety controls during an active trip', 'For account or document problems, use the driver support channel provided by Alvzyo operations'],
     ),
     'privacy': (
       title: 'Privacy policy',
