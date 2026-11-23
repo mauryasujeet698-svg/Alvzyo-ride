@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:quick_ride_maps/quick_ride_maps.dart';
+import 'package:quick_ride_driver/src/driver_section_screen.dart';
 import 'package:quick_ride_driver/src/home_screen.dart';
 
 void main() {
@@ -26,5 +27,18 @@ void main() {
     expect(find.text('My Rides'), findsOneWidget);
     expect(find.byType(Drawer), findsNothing);
     expect(find.text('Quick-Ride backend is not configured.'), findsNothing);
+  });
+
+  testWidgets('Driver informational pages remain accessible without login',
+      (tester) async {
+    await tester.pumpWidget(const MaterialApp(
+      home: DriverSectionScreen(section: 'privacy'),
+    ));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Privacy policy'), findsOneWidget);
+    expect(find.textContaining('Alvzyo processes driver information'), findsOneWidget);
+    expect(find.text('Sign in with Google'), findsNothing);
+    expect(find.byType(Drawer), findsNothing);
   });
 }
