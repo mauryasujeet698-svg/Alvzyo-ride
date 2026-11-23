@@ -108,7 +108,7 @@ class _QuickRideAdminBootstrapState extends State<QuickRideAdminBootstrap> {
         });
       }
     } catch (error) {
-      debugPrint('Quick-Ride Admin startup failed (' + error.runtimeType.toString() + ').');
+      debugPrint('Alvzyo Admin startup failed (' + error.runtimeType.toString() + ').');
       if (mounted) {
         setState(() {
           // Keep the complete read-only Admin preview navigable even if the
@@ -133,7 +133,7 @@ class _QuickRideAdminBootstrapState extends State<QuickRideAdminBootstrap> {
     if (_ready) return const QuickRideAdminApp();
 
     return MaterialApp(
-      title: 'Quick-Ride Admin',
+      title: 'Alvzyo Admin',
       theme: QuickRideTheme.light(),
       darkTheme: QuickRideTheme.dark(),
       home: Scaffold(
@@ -150,7 +150,7 @@ class _QuickRideAdminBootstrapState extends State<QuickRideAdminBootstrap> {
                     const SizedBox(height: 20),
                     Text(
                       _error == null
-                          ? 'Starting Quick-Ride Admin'
+                          ? 'Starting Alvzyo Admin'
                           : 'Admin could not start',
                       style: Theme.of(context).textTheme.titleLarge,
                       textAlign: TextAlign.center,
@@ -159,7 +159,7 @@ class _QuickRideAdminBootstrapState extends State<QuickRideAdminBootstrap> {
                     if (_busy) ...[
                       const CircularProgressIndicator(),
                       const SizedBox(height: 12),
-                      const Text('Connecting securely to Quick-Ride…'),
+                      const Text('Connecting securely to Alvzyo…'),
                     ] else ...[
                       Text(
                         _error ?? 'Something went wrong during startup.',
