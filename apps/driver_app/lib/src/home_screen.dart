@@ -665,7 +665,6 @@ class _DriverHomeScreenState extends State<DriverHomeScreen> {
           final status = driver['verification_status'].toString();
           if (status != 'approved') return _pendingApproval(status);
           unawaited(_syncAvailabilityFromProfile(driver));
-          unawaited(_loadEarnings());
 
           return ListView(
             padding: const EdgeInsets.all(16),
