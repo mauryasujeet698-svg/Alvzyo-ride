@@ -39,17 +39,17 @@ class _DriverSectionScreenState extends State<DriverSectionScreen> {
     ),
     'settings': (
       title: 'Settings',
-      intro: 'Manage the preferences used by Quick Ride Captain.',
+      intro: 'Manage the preferences used by Alvzyo Driver.',
       details: ['Notification and sound preferences', 'Location permission and GPS', 'Account security and sign-out'],
     ),
     'support': (
       title: 'Help & support',
-      intro: 'Guidance for using Quick Ride Captain.',
+      intro: 'Guidance for using Alvzyo Driver.',
       details: ['Keep GPS and notifications enabled while online', 'Use the ride-linked safety controls during an active trip', 'For account or document problems, use the driver support channel provided by Quick Ride operations'],
     ),
     'privacy': (
       title: 'Privacy policy',
-      intro: 'Quick Ride processes driver information to provide and protect driver services.',
+      intro: 'Alvzyo processes driver information to provide and protect driver services.',
       details: [
         'Account and vehicle details are used for driver onboarding and identity verification.',
         'Location is shared while online and during active trips to support dispatch, navigation and customer tracking.',
@@ -61,8 +61,8 @@ class _DriverSectionScreenState extends State<DriverSectionScreen> {
       ],
     ),
     'about': (
-      title: 'About Quick Ride',
-      intro: 'Quick Ride Captain helps approved driver partners receive, manage and complete customer trips.',
+      title: 'About Alvzyo Driver',
+      intro: 'Alvzyo Driver helps approved driver partners receive, manage and complete customer trips.',
       details: ['Go online only when you are ready to accept requests.', 'Review pickup and fare details before accepting a trip.', 'Keep your vehicle and verification documents up to date.'],
     ),
   };
