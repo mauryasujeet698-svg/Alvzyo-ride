@@ -18,6 +18,7 @@ class AdminDashboardScreen extends StatefulWidget {
 class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
   Map<String, dynamic>? _summary;
   bool _loading = false;
+  bool _signInBusy = false;
   String? _message;
   StreamSubscription<dynamic>? _authSubscription;
 
@@ -73,6 +74,26 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
     }
   }
 
+  Future<void> _signIn() async {
+    if (!QuickRideBackend.isInitialized || _signInBusy) return;
+    setState(() => _signInBusy = true);
+    try {
+      await QuickRideAuth.signInWithGoogle(
+        redirectTo: 'com.alvzyo.ride.admin://login-callback',
+      );
+    } catch (error) {
+      if (mounted) {
+        final details = error.toString();
+        final safeDetails = details.length > 180 ? details.substring(0, 180) : details;
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Google sign-in failed: $safeDetails')),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _signInBusy = false);
+    }
+  }
+
   Widget _metric(String label, String value, IconData icon) => Card(
         child: Padding(
           padding: const EdgeInsets.all(16),
@@ -107,9 +128,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
           else
             IconButton(
               tooltip: 'Sign in with Google',
-              onPressed: QuickRideBackend.isInitialized
-                  ? () => QuickRideAuth.signInWithGoogle(redirectTo: 'in.quickride.admin://login-callback')
-                  : null,
+              onPressed: QuickRideBackend.isInitialized && !_signInBusy ? _signIn : null,
               icon: const Icon(Icons.login_rounded),
             ),
         ],
