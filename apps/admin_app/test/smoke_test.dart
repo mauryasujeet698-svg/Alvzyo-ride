@@ -17,7 +17,7 @@ void main() {
     );
     expect(find.text('Service areas and pincodes'), findsOneWidget);
     await tester.scrollUntilVisible(
-      find.text('Sign in to manage Quick-Ride'),
+      find.text('Sign in to manage Alvzyo'),
       250,
       scrollable: find.byType(Scrollable).first,
     );
