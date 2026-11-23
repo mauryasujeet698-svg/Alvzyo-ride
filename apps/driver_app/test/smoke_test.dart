@@ -20,7 +20,7 @@ void main() {
     expect(find.text('Alvzyo Driver'), findsOneWidget);
     expect(find.text('Ready to accept rides?'), findsOneWidget);
     expect(find.textContaining('Preview mode · Read only'), findsOneWidget);
-    expect(find.byKey(const ValueKey('captain-map-test-placeholder')), findsOneWidget);
+    expect(find.byKey(const ValueKey('alvzyo-driver-map-test-placeholder')), findsOneWidget);
     await tester.scrollUntilVisible(
       find.text('Sign in with Google'),
       250,
