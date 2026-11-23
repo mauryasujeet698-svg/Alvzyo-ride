@@ -124,7 +124,7 @@ class QuickRideMaps {
         final lat = double.tryParse(item['lat']?.toString() ?? '') ?? 0;
         final lon = double.tryParse(item['lon']?.toString() ?? '') ?? 0;
         return QuickRideSearchResult(
-          mapboxId: (item['place_id'] ?? '${lat}_${lon}').toString(),
+          placeId: (item['place_id'] ?? '${lat}_${lon}').toString(),
           point: LatLng(lat, lon), name: name, address: display,
           resultType: (item['type'] ?? item['class'] ?? '').toString(),
           postalCode: address['postcode']?.toString() ?? _postal(display),
@@ -230,11 +230,11 @@ class QuickRideMapController {
 
 class QuickRideSearchResult {
   const QuickRideSearchResult({
-    required this.mapboxId, required this.point, required this.name,
+    required this.placeId, required this.point, required this.name,
     required this.address, required this.resultType, this.sessionToken, this.postalCode,
   });
-  /// Retained for compatibility; this is now the Nominatim place id.
-  final String mapboxId;
+  /// Nominatim place identifier.
+  final String placeId;
   final String? sessionToken;
   final LatLng point;
   final String name;
