@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 import 'package:quick_ride_auth/quick_ride_auth.dart';
 import 'package:quick_ride_backend/quick_ride_backend.dart';
 import 'driver_bottom_navigation.dart';
-import 'driver_navigation_drawer.dart';
 
 class DriverSectionScreen extends StatefulWidget {
   const DriverSectionScreen({super.key, required this.section});
@@ -218,7 +218,6 @@ class _DriverSectionScreenState extends State<DriverSectionScreen> {
       _ => 3,
     };
     return Scaffold(
-      drawer: const DriverNavigationDrawer(),
       bottomNavigationBar: DriverBottomNavigationBar(currentIndex: selectedTab),
       appBar: AppBar(
         title: Text(page.title),
@@ -264,7 +263,36 @@ class _DriverSectionScreenState extends State<DriverSectionScreen> {
                   ),
                 )),
           ],
-          if (!signedIn)
+          if (widget.section == 'profile') ...[
+            const SizedBox(height: 18),
+            Text('App information', style: Theme.of(context).textTheme.titleMedium),
+            const SizedBox(height: 8),
+            ListTile(
+              leading: const Icon(Icons.settings_outlined),
+              title: const Text('Settings'),
+              trailing: const Icon(Icons.chevron_right),
+              onTap: () => context.push('/section/settings'),
+            ),
+            ListTile(
+              leading: const Icon(Icons.support_agent_outlined),
+              title: const Text('Help & support'),
+              trailing: const Icon(Icons.chevron_right),
+              onTap: () => context.push('/section/support'),
+            ),
+            ListTile(
+              leading: const Icon(Icons.privacy_tip_outlined),
+              title: const Text('Privacy policy'),
+              trailing: const Icon(Icons.chevron_right),
+              onTap: () => context.push('/section/privacy'),
+            ),
+            ListTile(
+              leading: const Icon(Icons.info_outline_rounded),
+              title: const Text('About Alvzyo Driver'),
+              trailing: const Icon(Icons.chevron_right),
+              onTap: () => context.push('/section/about'),
+            ),
+          ],
+          if (!signedIn && needsData)
             Padding(
               padding: const EdgeInsets.only(top: 12),
               child: FilledButton.icon(
