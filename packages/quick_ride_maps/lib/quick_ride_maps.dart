@@ -400,7 +400,7 @@ class _QuickRideMapViewState extends State<QuickRideMapView> {
             )]),
           fm.MarkerLayer(markers: _markers()),
           fm.RichAttributionWidget(
-            alignment: AlignmentDirectional.bottomEnd,
+            alignment: fm.AttributionAlignment.bottomRight,
             attributions: const [fm.TextSourceAttribution('© OpenStreetMap contributors')],
           ),
         ],
