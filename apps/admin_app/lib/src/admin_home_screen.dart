@@ -94,7 +94,13 @@ class _AdminHomeScreenState extends State<AdminHomeScreen> {
   }
 
   Future<void> _signIn() async {
-    if (!QuickRideBackend.isInitialized || _signInBusy) return;
+    if (_signInBusy) return;
+    if (!QuickRideBackend.isInitialized) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Alvzyo sign-in service is not initialized. Check the connection and app configuration.')),
+      );
+      return;
+    }
     setState(() => _signInBusy = true);
     try {
       await QuickRideAuth.signInWithGoogle(
@@ -544,7 +550,7 @@ class _AdminHomeScreenState extends State<AdminHomeScreen> {
         actions: [
           IconButton(
             tooltip: 'Sign in',
-            onPressed: QuickRideBackend.isInitialized && !_signInBusy ? _signIn : null,
+            onPressed: _signInBusy ? null : _signIn,
             icon: const Icon(Icons.login),
           ),
         ],
@@ -650,7 +656,7 @@ class _AdminHomeScreenState extends State<AdminHomeScreen> {
           ),
           const SizedBox(height: 8),
           FilledButton.icon(
-            onPressed: QuickRideBackend.isInitialized && !_signInBusy ? _signIn : null,
+            onPressed: _signInBusy ? null : _signIn,
             icon: _signInBusy ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2)) : const Icon(Icons.login),
             label: Text(_signInBusy ? 'Signing in…' : 'Sign in to manage Alvzyo'),
           ),
