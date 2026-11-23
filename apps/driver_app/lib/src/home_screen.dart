@@ -874,7 +874,6 @@ class _DriverHomeScreenState extends State<DriverHomeScreen> {
               const SizedBox(height: 12),
               _availabilityCard(),
               const SizedBox(height: 12),
-              _earningsCard(),
               if (_message != null) ...[
                 const SizedBox(height: 8),
                 Text(_message!, style: TextStyle(color: Theme.of(context).colorScheme.error)),
