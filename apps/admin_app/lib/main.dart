@@ -13,7 +13,6 @@ import 'src/admin_dashboard_screen.dart';
 import 'src/operations_screen.dart';
 import 'src/notification_center_screen.dart';
 import 'src/admin_navigation_drawer.dart';
-import 'src/admin_bottom_navigation.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
