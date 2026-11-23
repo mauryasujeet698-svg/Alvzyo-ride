@@ -29,7 +29,7 @@ export type SharedAutoRoute = {
 
 export async function calculateSharedAutoRoute(
   legs: SharedAutoLeg[],
-  mapboxToken: string,
+  osrmBaseUrl: string,
   maxDetourPercent: number,
   maxExtraMinutes: number,
   fetcher: typeof fetch = fetch,
@@ -52,14 +52,12 @@ export async function calculateSharedAutoRoute(
     },
   ]);
   const coordinateString = nodes.map((node) => `${node.longitude},${node.latitude}`).join(";");
-  if (!mapboxToken.startsWith("pk.") && !mapboxToken.startsWith("sk.")) {
-    throw new Error("Mapbox access token is not configured for Shared Auto routing");
+  const normalizedBaseUrl = osrmBaseUrl.replace(/\\/+$/, "");
+  const tableUrl = new URL(`${normalizedBaseUrl}/table/v1/driving/${coordinateString}`);
+  if (!["http:", "https:"].includes(tableUrl.protocol)) {
+    throw new Error("OSRM routing URL must use HTTP or HTTPS");
   }
-  const tableUrl = new URL(`https://api.mapbox.com/directions-matrix/v1/mapbox/driving/${coordinateString}`);
   tableUrl.searchParams.set("annotations", "distance,duration");
-  tableUrl.searchParams.set("sources", "all");
-  tableUrl.searchParams.set("destinations", "all");
-  tableUrl.searchParams.set("access_token", mapboxToken);
   const response = await fetcher(tableUrl, {
     headers: { "User-Agent": "Quick-Ride/0.1", "Accept": "application/json" },
     signal: AbortSignal.timeout(10_000),
