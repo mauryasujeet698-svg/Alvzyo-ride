@@ -217,7 +217,9 @@ class QuickRideMaps {
 class QuickRideMapController {
   QuickRideMapController._(this._map);
   final fm.MapController _map;
-  void moveTo(LatLng point, {double? zoom}) => _map.move(point, zoom ?? 15);
+  void moveTo(LatLng point, {double? zoom}) {
+    _map.move(point, zoom ?? 15);
+  }
   void fitRoute(List<LatLng> points, {
     EdgeInsets padding = const EdgeInsets.fromLTRB(36, 175, 36, 250),
   }) {
@@ -225,7 +227,9 @@ class QuickRideMapController {
       _map.fitCamera(fm.CameraFit.coordinates(coordinates: points, padding: padding));
     }
   }
-  void rotate(double degrees) => _map.rotate(degrees);
+  void rotate(double degrees) {
+    _map.rotate(degrees);
+  }
 }
 
 class QuickRideSearchResult {
