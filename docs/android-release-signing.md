@@ -56,6 +56,34 @@ In GitHub, open **Alvzyo-ride → Settings → Secrets and variables → Actions
 
 Do not paste the keystore or either password into a chat, issue, source file, or commit.
 
+## Configure Firebase Cloud Messaging for all three apps
+
+The apps use Firebase Cloud Messaging for ride offers and account notifications. The previous QA workflow supplied empty Firebase values, so those builds did not have push notifications configured. The release workflow now requires real Firebase configuration for each Android app.
+
+Use the **same new Google Cloud project** that contains the Web and Android OAuth clients:
+
+1. Open the Firebase Console and add Firebase to that existing Google Cloud project (or select it if it is already a Firebase project).
+2. In Project settings → General, register three Android apps using these exact package names:
+   - `com.alvzyo.ride.customer`
+   - `com.alvzyo.ride.driver`
+   - `com.alvzyo.ride.admin`
+3. For each registered app, copy its Firebase App ID. The API key, Project ID and Messaging Sender ID are shared by all three apps.
+4. In Google Cloud Console, ensure the **Firebase Cloud Messaging API** is enabled for this project.
+5. In Firebase Console → Project settings → Service accounts, generate a new private key JSON for a service account. In Google Cloud IAM, ensure that service account has the **Firebase Cloud Messaging API Admin** role so the Supabase Edge Function can send messages.
+
+Add these six GitHub Actions repository secrets:
+
+| Secret name | Value |
+|---|---|
+| `FIREBASE_API_KEY` | Firebase project's Web API key from Project settings |
+| `FIREBASE_PROJECT_ID` | Firebase/Google Cloud project ID |
+| `FIREBASE_MESSAGING_SENDER_ID` | Firebase project's numeric Messaging Sender ID |
+| `FIREBASE_APP_ID_CUSTOMER` | Firebase App ID for `com.alvzyo.ride.customer` |
+| `FIREBASE_APP_ID_DRIVER` | Firebase App ID for `com.alvzyo.ride.driver` |
+| `FIREBASE_APP_ID_ADMIN` | Firebase App ID for `com.alvzyo.ride.admin` |
+
+In Supabase Dashboard → Project → Edge Functions → Secrets, add **`FCM_SERVICE_ACCOUNT_JSON`** with the complete contents of the service-account JSON file. Keep this private key only in Supabase secrets; do not add it to GitHub, the app, or this repository. The deployed `send-push` function reads this secret to authenticate with FCM.
+
 ## Build the three release APKs
 
 After the four secrets are saved and the new SHA-1 is registered in Google Cloud, open the repository's **Actions** tab, select **Build Alvzyo Customer, Driver and Admin Release APKs**, and choose **Run workflow** on `main`.
