@@ -186,12 +186,7 @@ jobs:
           set -euo pipefail
           mkdir -p dist
           for app in customer; do
-            case "$app" in
-              customer) firebase_app_id="$FIREBASE_CUSTOMER_APP_ID" ;;
-              driver) firebase_app_id="$FIREBASE_DRIVER_APP_ID" ;;
-              admin) firebase_app_id="$FIREBASE_ADMIN_APP_ID" ;;
-              *) echo "::error::Unknown app role: $app"; exit 1 ;;
-            esac
+            firebase_app_id=""
             (
               cd "apps/${app}_app"
               mkdir -p build/symbols
