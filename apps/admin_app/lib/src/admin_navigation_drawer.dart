@@ -35,7 +35,7 @@ class AdminNavigationDrawer extends StatelessWidget {
               child: Align(
                 alignment: Alignment.bottomLeft,
                 child: Text(
-                  'Quick Ride Admin',
+                  'Alvzyo Admin',
                   style: TextStyle(
                     color: Colors.white,
                     fontSize: 22,
@@ -53,7 +53,7 @@ class AdminNavigationDrawer extends StatelessWidget {
             _entry(context, Icons.settings_outlined, 'Settings', '/info/settings'),
             _entry(context, Icons.support_agent_outlined, 'Help & support', '/info/support'),
             _entry(context, Icons.privacy_tip_outlined, 'Privacy policy', '/info/privacy'),
-            _entry(context, Icons.info_outline_rounded, 'About Quick Ride', '/info/about'),
+            _entry(context, Icons.info_outline_rounded, 'About Alvzyo Admin', '/info/about'),
             const Divider(),
             if (user == null)
               ListTile(
@@ -66,7 +66,7 @@ class AdminNavigationDrawer extends StatelessWidget {
                         Navigator.of(context).pop();
                         try {
                           await QuickRideAuth.signInWithGoogle(
-                            redirectTo: 'in.quickride.admin://login-callback',
+                            redirectTo: 'com.alvzyo.ride.admin://login-callback',
                           );
                         } catch (error) {
                           if (context.mounted) {
@@ -133,7 +133,7 @@ class AdminInfoScreen extends StatelessWidget {
       ),
       'privacy': (
         title: 'Privacy policy',
-        intro: 'Quick Ride uses information needed to provide and protect ride services.',
+        intro: 'Alvzyo uses information needed to provide and protect ride services.',
         points: [
           'Account details are used for sign-in, account security and service communication.',
           'Location is used to set pickup points, calculate routes and support active-trip tracking.',
@@ -146,7 +146,7 @@ class AdminInfoScreen extends StatelessWidget {
         ],
       ),
       'about': (
-        title: 'About Quick Ride',
+        title: 'About Alvzyo Admin',
         intro: 'Quick Ride is a ride-booking platform connecting customers with independent driver partners.',
         points: [
           'Customer, Driver and Admin apps share the same protected ride and service infrastructure.',
