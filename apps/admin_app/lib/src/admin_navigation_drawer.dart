@@ -147,7 +147,7 @@ class AdminInfoScreen extends StatelessWidget {
       ),
       'about': (
         title: 'About Alvzyo Admin',
-        intro: 'Quick Ride is a ride-booking platform connecting customers with independent driver partners.',
+        intro: 'Alvzyo is a ride-booking platform connecting customers with independent driver partners.',
         points: [
           'Customer, Driver and Admin apps share the same protected ride and service infrastructure.',
           'Service availability and vehicle categories depend on the configured operating area.',
