@@ -420,7 +420,7 @@ class _CustomerHomeScreenState extends State<CustomerHomeScreen> {
           slivers: [
             CollapsibleMapSliver(
               child: map,
-              expandedHeightFactor: 0.336,
+              expandedHeightFactor: 0.48,
               collapsedHeightFactor: 0.20,
             ),
             SliverPadding(
