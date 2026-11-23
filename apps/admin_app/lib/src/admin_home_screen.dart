@@ -44,6 +44,7 @@ class _AdminHomeScreenState extends State<AdminHomeScreen> {
   StreamSubscription<dynamic>? _authSubscription;
 
   bool _hasAdminAccess = false;
+  bool _signInBusy = false;
 
   @override
   void initState() {
@@ -90,6 +91,26 @@ class _AdminHomeScreenState extends State<AdminHomeScreen> {
       }
     });
     if (allowed && directory == null && !busy) unawaited(load());
+  }
+
+  Future<void> _signIn() async {
+    if (!QuickRideBackend.isInitialized || _signInBusy) return;
+    setState(() => _signInBusy = true);
+    try {
+      await QuickRideAuth.signInWithGoogle(
+        redirectTo: 'com.alvzyo.ride.admin://login-callback',
+      );
+    } catch (error) {
+      if (mounted) {
+        final details = error.toString();
+        final safeDetails = details.length > 180 ? details.substring(0, 180) : details;
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Google sign-in failed: $safeDetails')),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _signInBusy = false);
+    }
   }
 
   Future<Map<String, dynamic>> call(String action, [Map<String, dynamic> extra = const {}]) async {
@@ -523,11 +544,7 @@ class _AdminHomeScreenState extends State<AdminHomeScreen> {
         actions: [
           IconButton(
             tooltip: 'Sign in',
-            onPressed: QuickRideBackend.isInitialized
-                ? () => QuickRideAuth.signInWithGoogle(
-                      redirectTo: 'in.quickride.admin://login-callback',
-                    )
-                : null,
+            onPressed: QuickRideBackend.isInitialized && !_signInBusy ? _signIn : null,
             icon: const Icon(Icons.login),
           ),
         ],
@@ -638,8 +655,8 @@ class _AdminHomeScreenState extends State<AdminHomeScreen> {
                       redirectTo: 'in.quickride.admin://login-callback',
                     )
                 : null,
-            icon: const Icon(Icons.login),
-            label: const Text('Sign in to manage Quick-Ride'),
+            icon: _signInBusy ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2)) : const Icon(Icons.login),
+            label: Text(_signInBusy ? 'Signing in…' : 'Sign in to manage Alvzyo'),
           ),
         ],
       ),
