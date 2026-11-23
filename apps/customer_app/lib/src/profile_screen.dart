@@ -150,72 +150,9 @@ class _CustomerProfileScreenState extends State<CustomerProfileScreen> {
 
 
   Future<void> _showSavedPlaces() async {
-    await showModalBottomSheet<void>(
-      context: context,
-      isScrollControlled: true,
-      showDragHandle: true,
-      builder: (sheetContext) => SafeArea(
-        child: ValueListenableBuilder<List<Map<String, dynamic>>>(
-          valueListenable: QuickRideCustomerPreferences.savedPlaces,
-          builder: (context, places, _) => Padding(
-            padding: const EdgeInsets.fromLTRB(18, 8, 18, 24),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text('Saved places',
-                    style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                          fontWeight: FontWeight.w800,
-                        )),
-                const SizedBox(height: 8),
-                if (places.isEmpty)
-                  const Padding(
-                    padding: EdgeInsets.symmetric(vertical: 22),
-                    child: Text('Save a place from Recent places on the home screen.'),
-                  )
-                else
-                  Flexible(
-                    child: ListView.separated(
-                      shrinkWrap: true,
-                      itemCount: places.length,
-                      separatorBuilder: (_, __) => const Divider(height: 1),
-                      itemBuilder: (context, index) {
-                        final place = places[index];
-                        return ListTile(
-                          contentPadding: EdgeInsets.zero,
-                          leading: const Icon(Icons.favorite_rounded,
-                              color: Color(0xFFE45872)),
-                          title: Text(place['name'].toString()),
-                          subtitle: Text(place['address'].toString()),
-                          trailing: IconButton(
-                            tooltip: 'Remove saved place',
-                            icon: const Icon(Icons.delete_outline_rounded),
-                            onPressed: () =>
-                                QuickRideCustomerPreferences.removeSavedPlace(place),
-                          ),
-                          onTap: () {
-                            Navigator.of(sheetContext).pop();
-                            this.context.go('/book', extra: {
-                              'pickup': {
-                                'longitude': place['longitude'],
-                                'latitude': place['latitude'],
-                                'address': place['address'],
-                                'pincode': place['postalCode'],
-                              },
-                            });
-                          },
-                        );
-                      },
-                    ),
-                  ),
-              ],
-            ),
-          ),
-        ),
-      ),
-    );
+    if (!mounted) return;
+    await context.push('/saved-addresses');
   }
-
 
   Widget _profileOption({
     required IconData icon,
@@ -259,44 +196,8 @@ class _CustomerProfileScreenState extends State<CustomerProfileScreen> {
 
 
   Future<void> _showPayments() async {
-    await showModalBottomSheet<void>(
-      context: context,
-      showDragHandle: true,
-      builder: (sheetContext) => SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.fromLTRB(20, 8, 20, 24),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                _t('Payments', 'भुगतान'),
-                style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w800),
-              ),
-              const SizedBox(height: 12),
-              ListTile(
-                contentPadding: EdgeInsets.zero,
-                leading: const Icon(Icons.payments_outlined),
-                title: Text(_t('Cash payment', 'नकद भुगतान')),
-                subtitle: Text(_t(
-                  'Cash is available when offered for an eligible ride.',
-                  'पात्र राइड के लिए उपलब्ध होने पर नकद भुगतान किया जा सकता है।',
-                )),
-              ),
-              ListTile(
-                contentPadding: EdgeInsets.zero,
-                leading: const Icon(Icons.credit_card_outlined),
-                title: Text(_t('Digital payments', 'डिजिटल भुगतान')),
-                subtitle: Text(_t(
-                  'Additional payment methods will appear here when enabled.',
-                  'अन्य भुगतान विकल्प उपलब्ध होने पर यहां दिखाई देंगे।',
-                )),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
+    if (!mounted) return;
+    await context.push('/payments');
   }
 
   Future<void> _shareApp() async {
@@ -452,7 +353,7 @@ class _CustomerProfileScreenState extends State<CustomerProfileScreen> {
             icon: Icons.support_agent_outlined,
             title: _t('Help & support', 'सहायता और सपोर्ट'),
             subtitle: _t('Get help with a ride or a general issue', 'राइड या अन्य समस्या में सहायता लें'),
-            onTap: () => context.go('/support'),
+            onTap: () => context.push('/support'),
           ),
           _profileOption(
             icon: Icons.notifications_outlined,
@@ -1127,4 +1028,142 @@ class CustomerNotificationsScreen extends StatelessWidget {
           },
         ),
       );
+}
+
+
+class CustomerSavedAddressesScreen extends StatelessWidget {
+  const CustomerSavedAddressesScreen({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(title: const Text('Saved addresses')),
+      body: ValueListenableBuilder<List<Map<String, dynamic>>>(
+        valueListenable: QuickRideCustomerPreferences.savedPlaces,
+        builder: (context, places, _) {
+          if (places.isEmpty) {
+            return const Center(
+              child: Padding(
+                padding: EdgeInsets.all(28),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(Icons.bookmark_border_rounded, size: 48),
+                    SizedBox(height: 12),
+                    Text(
+                      'No saved addresses yet',
+                      style: TextStyle(fontWeight: FontWeight.w700, fontSize: 18),
+                    ),
+                    SizedBox(height: 6),
+                    Text(
+                      'Save a place from Recent places on the home screen and it will appear here.',
+                      textAlign: TextAlign.center,
+                    ),
+                  ],
+                ),
+              ),
+            );
+          }
+          return ListView.separated(
+            padding: const EdgeInsets.fromLTRB(16, 12, 16, 24),
+            itemCount: places.length,
+            separatorBuilder: (_, __) => const Divider(height: 1),
+            itemBuilder: (context, index) {
+              final place = places[index];
+              return ListTile(
+                contentPadding: const EdgeInsets.symmetric(vertical: 6),
+                leading: const CircleAvatar(
+                  child: Icon(Icons.bookmark_rounded),
+                ),
+                title: Text(place['name']?.toString() ?? 'Saved place'),
+                subtitle: Text(place['address']?.toString() ?? ''),
+                trailing: IconButton(
+                  tooltip: 'Remove saved address',
+                  icon: const Icon(Icons.delete_outline_rounded),
+                  onPressed: () =>
+                      QuickRideCustomerPreferences.removeSavedPlace(place),
+                ),
+                onTap: () {
+                  context.go('/book', extra: {
+                    'pickup': {
+                      'longitude': place['longitude'],
+                      'latitude': place['latitude'],
+                      'address': place['address'],
+                      'pincode': place['postalCode'],
+                    },
+                  });
+                },
+              );
+            },
+          );
+        },
+      ),
+    );
+  }
+}
+
+class CustomerPaymentsScreen extends StatelessWidget {
+  const CustomerPaymentsScreen({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(title: const Text('Payments')),
+      body: ListView(
+        padding: const EdgeInsets.fromLTRB(16, 12, 16, 24),
+        children: [
+          Text(
+            'Payment methods',
+            style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                  fontWeight: FontWeight.w800,
+                ),
+          ),
+          const SizedBox(height: 8),
+          Card(
+            child: ListTile(
+              leading: const CircleAvatar(
+                child: Icon(Icons.payments_outlined),
+              ),
+              title: const Text('Cash payment'),
+              subtitle: const Text(
+                'Cash is available when offered for an eligible ride.',
+              ),
+            ),
+          ),
+          Card(
+            child: ListTile(
+              leading: const CircleAvatar(
+                child: Icon(Icons.credit_card_outlined),
+              ),
+              title: const Text('Digital payments'),
+              subtitle: const Text(
+                'Additional payment methods will appear here when enabled.',
+              ),
+            ),
+          ),
+          const SizedBox(height: 20),
+          Text(
+            'Fare records',
+            style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                  fontWeight: FontWeight.w800,
+                ),
+          ),
+          const SizedBox(height: 8),
+          Card(
+            child: ListTile(
+              leading: const CircleAvatar(
+                child: Icon(Icons.receipt_long_outlined),
+              ),
+              title: const Text('Ride fare history'),
+              subtitle: const Text(
+                'View your rides and their fare details.',
+              ),
+              trailing: const Icon(Icons.chevron_right_rounded),
+              onTap: () => context.go('/my-rides'),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
 }

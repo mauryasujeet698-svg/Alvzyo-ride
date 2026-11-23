@@ -232,6 +232,14 @@ class QuickRideCustomerApp extends StatelessWidget {
           initialRideId: state.uri.queryParameters['rideId'],
         ),
       ),
+      GoRoute(
+        path: '/saved-addresses',
+        builder: (_, __) => const CustomerSavedAddressesScreen(),
+      ),
+      GoRoute(
+        path: '/payments',
+        builder: (_, __) => const CustomerPaymentsScreen(),
+      ),
       GoRoute(path: '/settings', builder: (_, __) => const CustomerSettingsScreen()),
       GoRoute(path: '/notifications', builder: (_, __) => const CustomerNotificationsScreen()),
       GoRoute(

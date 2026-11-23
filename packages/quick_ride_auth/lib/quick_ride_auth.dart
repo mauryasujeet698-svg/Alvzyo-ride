@@ -51,17 +51,13 @@ class QuickRideAuth {
       try {
         googleAccount = await _googleSignIn.authenticate();
       } catch (error) {
-        // Credential Manager can retain an account re-authentication state
-        // after an interrupted sign-out. Clear Google's native session and
-        // retry only this known stale-session failure once.
         final details = error.toString().toLowerCase();
-        if (!details.contains('account reauth failed')) rethrow;
-        try {
-          await _googleSignIn.signOut();
-        } catch (_) {
-          // Continue with a fresh account selection attempt.
+        if (details.contains('account reauth failed')) {
+          throw const AuthException(
+            'Google could not verify this installed app build. Check the Android OAuth client package name and the SHA-1 fingerprint of the APK signing certificate.',
+          );
         }
-        googleAccount = await _googleSignIn.authenticate();
+        rethrow;
       }
 
       final idToken = googleAccount.authentication.idToken;
