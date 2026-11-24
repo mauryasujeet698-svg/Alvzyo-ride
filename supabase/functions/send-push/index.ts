@@ -6,6 +6,12 @@ const corsHeaders = {
   "Access-Control-Allow-Methods": "POST, OPTIONS",
 };
 type Json = Record<string, unknown>;
+
+const respond = (status: number, body: unknown): Response =>
+  new Response(JSON.stringify(body), {
+    status,
+    headers: { ...corsHeaders, "Content-Type": "application/json" },
+  });
 const GCP_PROJECT_ID = "alvzyo-ride";
 const WIF_POOL_ID = "alvzyo-supabase-pool";
 const WIF_PROVIDER_ID = "supabase-edge-oidc";
@@ -76,8 +82,9 @@ async function signWorkloadAssertion(privateJwkJson: string, audience: string): 
 async function googleAccessToken(): Promise<string> {
   const nowMs = Date.now();
   const now = Math.floor(nowMs / 1000);
-  if (cachedAccessToken && cachedAccessTokenExpiresAt > now + 60) {
-    return cachedAccessToken;
+  const cachedToken = cachedAccessToken;
+  if (cachedToken && cachedAccessTokenExpiresAt > now + 60) {
+    return cachedToken;
   }
 
   const privateJwkJson = Deno.env.get("GCP_WIF_PRIVATE_JWK");
