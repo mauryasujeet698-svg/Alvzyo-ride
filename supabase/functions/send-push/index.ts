@@ -150,7 +150,7 @@ async function googleAccessToken(): Promise<string> {
   cachedAccessTokenExpiresAt = Number.isFinite(expiry)
     ? Math.floor(expiry / 1000)
     : now + 50 * 60;
-  return cachedAccessToken;
+  return impersonationData.accessToken;
 }
 
 Deno.serve(async (req: Request) => {
