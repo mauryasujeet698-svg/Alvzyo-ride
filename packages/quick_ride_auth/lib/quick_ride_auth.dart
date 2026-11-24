@@ -70,9 +70,16 @@ class QuickRideAuth {
         );
       }
 
+      // Match Alteo's native Google flow: request the email authorization
+      // token as well as the ID token before exchanging credentials with
+      // Supabase Auth.
+      final authorization = await googleAccount.authorizationClient
+          .authorizationForScopes(const ['email']);
+
       return await QuickRideBackend.client.auth.signInWithIdToken(
         provider: OAuthProvider.google,
         idToken: idToken,
+        accessToken: authorization?.accessToken,
       );
     } catch (error, stack) {
       debugPrint('Alvzyo Google sign-in failed (${error.runtimeType}): $error');
