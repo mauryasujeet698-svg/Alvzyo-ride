@@ -13,6 +13,7 @@ const respond = (status: number, body: unknown): Response =>
     headers: { ...corsHeaders, "Content-Type": "application/json" },
   });
 const GCP_PROJECT_ID = "alvzyo-ride";
+const GCP_PROJECT_NUMBER = "178250171089";
 const WIF_POOL_ID = "alvzyo-supabase-pool";
 const WIF_PROVIDER_ID = "supabase-edge-oidc";
 const SERVICE_ACCOUNT_EMAIL =
@@ -88,12 +89,11 @@ async function googleAccessToken(): Promise<string> {
   }
 
   const privateJwkJson = Deno.env.get("GCP_WIF_PRIVATE_JWK");
-  const projectNumber = Deno.env.get("GCP_PROJECT_NUMBER");
-  if (!privateJwkJson || !projectNumber) {
-    throw new Error("Missing GCP_WIF_PRIVATE_JWK or GCP_PROJECT_NUMBER Supabase secret.");
+  if (!privateJwkJson) {
+    throw new Error("Missing GCP_WIF_PRIVATE_JWK Supabase secret.");
   }
 
-  const audience = providerResource(projectNumber);
+  const audience = providerResource(GCP_PROJECT_NUMBER);
   const assertion = await signWorkloadAssertion(privateJwkJson, audience);
   const stsResponse = await fetch("https://sts.googleapis.com/v1/token", {
     method: "POST",
@@ -164,7 +164,7 @@ Deno.serve(async (req: Request) => {
   }
 
   const url = Deno.env.get("SUPABASE_URL");
-  if (!url || !Deno.env.get("GCP_WIF_PRIVATE_JWK") || !Deno.env.get("GCP_PROJECT_NUMBER")) {
+  if (!url || !Deno.env.get("GCP_WIF_PRIVATE_JWK")) {
     return respond(503, { error: "FCM_NOT_CONFIGURED" });
   }
 
