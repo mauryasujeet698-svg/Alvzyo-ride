@@ -6,80 +6,144 @@ const corsHeaders = {
   "Access-Control-Allow-Methods": "POST, OPTIONS",
 };
 type Json = Record<string, unknown>;
+const GCP_PROJECT_ID = "alvzyo-ride";
+const WIF_POOL_ID = "alvzyo-supabase-pool";
+const WIF_PROVIDER_ID = "supabase-edge-oidc";
+const SERVICE_ACCOUNT_EMAIL =
+  "alvzyo-fcm-sender@alvzyo-ride.iam.gserviceaccount.com";
+const WIF_ISSUER =
+  "https://czbelhtemzklcmssumpc.supabase.co/functions/v1/send-push";
+const WIF_SUBJECT = "alvzyo-supabase-edge-fcm";
+
 let cachedAccessToken: string | null = null;
 let cachedAccessTokenExpiresAt = 0;
 
-function respond(status: number, body: Json) {
-  return new Response(JSON.stringify(body), {
-    status,
-    headers: { ...corsHeaders, "Content-Type": "application/json", "Cache-Control": "no-store" },
-  });
-}
 function base64Url(bytes: Uint8Array): string {
   let binary = "";
   for (const byte of bytes) binary += String.fromCharCode(byte);
-  return btoa(binary).replace(/=/g, "").replace(/\+/g, "-").replace(/\//g, "_");
+  return btoa(binary).replace(/=/g, "").replace(/\\+/g, "-").replace(/\\//g, "_");
 }
+
 function encodeJson(value: Json): string {
   return base64Url(new TextEncoder().encode(JSON.stringify(value)));
 }
-function decodePrivateKey(pem: string): ArrayBuffer {
-  const clean = pem.replace(/-----BEGIN PRIVATE KEY-----|-----END PRIVATE KEY-----|\s/g, "");
-  const binary = atob(clean);
-  const bytes = new Uint8Array(binary.length);
-  for (let index = 0; index < binary.length; index++) {
-    bytes[index] = binary.charCodeAt(index);
-  }
-  return bytes.buffer;
+
+function providerResource(projectNumber: string): string {
+  return (
+    "//iam.googleapis.com/projects/" + projectNumber +
+    "/locations/global/workloadIdentityPools/" + WIF_POOL_ID +
+    "/providers/" + WIF_PROVIDER_ID
+  );
 }
 
-async function googleAccessToken(account: {
-  client_email: string;
-  private_key: string;
-}): Promise<string> {
-  const now = Math.floor(Date.now() / 1000);
-  if (cachedAccessToken && cachedAccessTokenExpiresAt > now + 60) return cachedAccessToken as string;
+async function signWorkloadAssertion(privateJwkJson: string, audience: string): Promise<string> {
+  let jwk: JsonWebKey & { kid?: string; alg?: string };
+  try {
+    jwk = JSON.parse(privateJwkJson) as JsonWebKey & { kid?: string; alg?: string };
+  } catch {
+    throw new Error("GCP_WIF_PRIVATE_JWK is not valid JSON.");
+  }
 
-  const header = encodeJson({ alg: "RS256", typ: "JWT" });
-  const claims = encodeJson({
-    iss: account.client_email,
-    scope: "https://www.googleapis.com/auth/firebase.messaging",
-    aud: "https://oauth2.googleapis.com/token",
-    iat: now,
-    exp: now + 3600,
-  });
-  const unsigned = header + "." + claims;
-  const key = await crypto.subtle.importKey(
-    "pkcs8",
-    decodePrivateKey(account.private_key),
+  if (jwk.kty !== "RSA" || !jwk.d || !jwk.n || !jwk.e || !jwk.kid) {
+    throw new Error("GCP_WIF_PRIVATE_JWK must be a private RSA JWK with its matching kid.");
+  }
+
+  const now = Math.floor(Date.now() / 1000);
+  const unsigned = encodeJson({ alg: "RS256", typ: "JWT", kid: jwk.kid }) + "." +
+    encodeJson({
+      iss: WIF_ISSUER,
+      sub: WIF_SUBJECT,
+      aud: audience,
+      iat: now,
+      exp: now + 300,
+    });
+
+  const signingKey = await crypto.subtle.importKey(
+    "jwk",
+    jwk,
     { name: "RSASSA-PKCS1-v1_5", hash: "SHA-256" },
     false,
     ["sign"],
   );
-  const signature = await crypto.subtle.sign(
+  const signature = new Uint8Array(await crypto.subtle.sign(
     "RSASSA-PKCS1-v1_5",
-    key,
+    signingKey,
     new TextEncoder().encode(unsigned),
-  );
-  const assertion = unsigned + "." + base64Url(new Uint8Array(signature));
-  const tokenResponse = await fetch("https://oauth2.googleapis.com/token", {
+  ));
+  return unsigned + "." + base64Url(signature);
+}
+
+async function googleAccessToken(): Promise<string> {
+  const nowMs = Date.now();
+  const now = Math.floor(nowMs / 1000);
+  if (cachedAccessToken && cachedAccessTokenExpiresAt > now + 60) {
+    return cachedAccessToken;
+  }
+
+  const privateJwkJson = Deno.env.get("GCP_WIF_PRIVATE_JWK");
+  const projectNumber = Deno.env.get("GCP_PROJECT_NUMBER");
+  if (!privateJwkJson || !projectNumber) {
+    throw new Error("Missing GCP_WIF_PRIVATE_JWK or GCP_PROJECT_NUMBER Supabase secret.");
+  }
+
+  const audience = providerResource(projectNumber);
+  const assertion = await signWorkloadAssertion(privateJwkJson, audience);
+  const stsResponse = await fetch("https://sts.googleapis.com/v1/token", {
     method: "POST",
     headers: { "Content-Type": "application/x-www-form-urlencoded" },
     body: new URLSearchParams({
-      grant_type: "urn:ietf:params:oauth:grant-type:jwt-bearer",
-      assertion,
+      grant_type: "urn:ietf:params:oauth:grant-type:token-exchange",
+      audience,
+      scope: "https://www.googleapis.com/auth/cloud-platform",
+      requested_token_type: "urn:ietf:params:oauth:token-type:access_token",
+      subject_token_type: "urn:ietf:params:oauth:token-type:jwt",
+      subject_token: assertion,
     }),
     signal: AbortSignal.timeout(12000),
   });
-  if (!tokenResponse.ok) {
-    console.error("FCM OAuth token request failed", tokenResponse.status);
-    throw new Error("FCM_AUTH_FAILED");
+
+  const stsData = await stsResponse.json().catch(() => ({}));
+  if (!stsResponse.ok || typeof stsData.access_token !== "string") {
+    console.error("Google STS token exchange failed", {
+      status: stsResponse.status,
+      error: typeof stsData.error === "string" ? stsData.error : "unknown_error",
+    });
+    throw new Error("FCM_WORKLOAD_IDENTITY_EXCHANGE_FAILED");
   }
-  const payload = await tokenResponse.json();
-  if (typeof payload.access_token !== "string") throw new Error("FCM_AUTH_FAILED");
-  cachedAccessToken = payload.access_token;
-  cachedAccessTokenExpiresAt = now + Number(payload.expires_in ?? 3600);
-  return payload.access_token as string;
+
+  const impersonationUrl =
+    "https://iamcredentials.googleapis.com/v1/projects/-/serviceAccounts/" +
+    encodeURIComponent(SERVICE_ACCOUNT_EMAIL) + ":generateAccessToken";
+  const impersonationResponse = await fetch(impersonationUrl, {
+    method: "POST",
+    headers: {
+      Authorization: "Bearer " + stsData.access_token,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      scope: ["https://www.googleapis.com/auth/firebase.messaging"],
+      lifetime: "3600s",
+    }),
+    signal: AbortSignal.timeout(12000),
+  });
+
+  const impersonationData = await impersonationResponse.json().catch(() => ({}));
+  if (!impersonationResponse.ok || typeof impersonationData.accessToken !== "string") {
+    console.error("Google service-account impersonation failed", {
+      status: impersonationResponse.status,
+      error: impersonationData.error?.status ?? "unknown_error",
+    });
+    throw new Error("FCM_SERVICE_ACCOUNT_IMPERSONATION_FAILED");
+  }
+
+  const expiry = typeof impersonationData.expireTime === "string"
+    ? Date.parse(impersonationData.expireTime)
+    : nowMs + 50 * 60 * 1000;
+  cachedAccessToken = impersonationData.accessToken;
+  cachedAccessTokenExpiresAt = Number.isFinite(expiry)
+    ? Math.floor(expiry / 1000)
+    : now + 50 * 60;
+  return cachedAccessToken;
 }
 
 Deno.serve(async (req: Request) => {
@@ -93,19 +157,8 @@ Deno.serve(async (req: Request) => {
   }
 
   const url = Deno.env.get("SUPABASE_URL");
-  const serviceAccountJson = Deno.env.get("FCM_SERVICE_ACCOUNT_JSON");
-  if (!url || !serviceAccountJson) {
+  if (!url || !Deno.env.get("GCP_WIF_PRIVATE_JWK") || !Deno.env.get("GCP_PROJECT_NUMBER")) {
     return respond(503, { error: "FCM_NOT_CONFIGURED" });
-  }
-
-  let account: { project_id: string; client_email: string; private_key: string };
-  try {
-    account = JSON.parse(serviceAccountJson);
-    if (!account.project_id || !account.client_email || !account.private_key) {
-      return respond(503, { error: "FCM_SERVICE_ACCOUNT_INVALID" });
-    }
-  } catch {
-    return respond(503, { error: "FCM_SERVICE_ACCOUNT_INVALID" });
   }
 
   let body: Json;
@@ -148,7 +201,7 @@ Deno.serve(async (req: Request) => {
 
   let accessToken: string;
   try {
-    accessToken = await googleAccessToken(account);
+    accessToken = await googleAccessToken();
   } catch (error) {
     console.error("FCM authorization failed", String(error));
     return respond(502, { error: "FCM_AUTH_FAILED" });
@@ -157,7 +210,7 @@ Deno.serve(async (req: Request) => {
   const results = await Promise.all(devices.map(async (device: { id: string; token: string }) => {
     try {
       const response = await fetch(
-        `https://fcm.googleapis.com/v1/projects/${encodeURIComponent(account.project_id)}/messages:send`,
+        `https://fcm.googleapis.com/v1/projects/${GCP_PROJECT_ID}/messages:send`,
         {
           method: "POST",
           headers: {
