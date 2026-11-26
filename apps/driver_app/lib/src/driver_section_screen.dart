@@ -120,11 +120,11 @@ class _DriverSectionScreenState extends State<DriverSectionScreen> {
     try {
       final permission = await Geolocator.checkPermission();
       final enabled = await Geolocator.isLocationServiceEnabled();
-      final prefs = await SharedPreferences.getInstance();
+      final notificationStatus = await QuickRideNotifications.getPermissionStatus();
       if (!mounted) return;
       setState(() {
         _locationStatus = enabled ? permission.name : 'GPS disabled';
-        _notificationStatus = prefs.getString('alvzyo_driver_notification_status') ?? 'Tap Enable to check';
+        _notificationStatus = notificationStatus ?? 'Not available';
       });
     } catch (_) {
       if (mounted) setState(() => _locationStatus = 'Unavailable');
