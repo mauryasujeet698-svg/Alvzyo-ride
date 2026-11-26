@@ -7,6 +7,7 @@ import 'package:quick_ride_backend/quick_ride_backend.dart';
 
 import 'admin_bottom_navigation.dart';
 import 'admin_navigation_drawer.dart';
+import 'admin_access.dart';
 
 class AdminDashboardScreen extends StatefulWidget {
   const AdminDashboardScreen({super.key});
@@ -84,9 +85,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
     }
     setState(() => _signInBusy = true);
     try {
-      await QuickRideAuth.signInWithGoogle(
-        redirectTo: 'com.alvzyo.ride.admin://login-callback',
-      );
+      await AdminAccess.signIn();
     } catch (error) {
       if (mounted) {
         final details = error.toString();
@@ -100,18 +99,26 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
     }
   }
 
-  Widget _metric(String label, String value, IconData icon) => Card(
-        child: Padding(
-          padding: const EdgeInsets.all(16),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Icon(icon, size: 24),
-              const SizedBox(height: 14),
-              Text(value, style: Theme.of(context).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.w800)),
-              const SizedBox(height: 4),
-              Text(label),
-            ],
+  Widget _metric(String label, String value, IconData icon, {VoidCallback? onTap}) => Card(
+        clipBehavior: Clip.antiAlias,
+        child: InkWell(
+          onTap: onTap,
+          child: Padding(
+            padding: const EdgeInsets.all(16),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Icon(icon, size: 24),
+                const SizedBox(height: 14),
+                Text(value, style: Theme.of(context).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.w800)),
+                const SizedBox(height: 4),
+                Text(label),
+                if (onTap != null) const Align(
+                  alignment: Alignment.centerRight,
+                  child: Icon(Icons.chevron_right, size: 18),
+                ),
+              ],
+            ),
           ),
         ),
       );
@@ -176,12 +183,12 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
               physics: const NeverScrollableScrollPhysics(),
               childAspectRatio: 1.55,
               children: [
-                _metric('Total rides', summary?['rides_total']?.toString() ?? '—', Icons.route_outlined),
-                _metric('Active rides', summary?['rides_active']?.toString() ?? '—', Icons.directions_car_outlined),
-                _metric('Completed rides', summary?['rides_completed']?.toString() ?? '—', Icons.check_circle_outline),
-                _metric('Registered drivers', summary?['drivers_total']?.toString() ?? '—', Icons.people_outline),
-                _metric('Pending reviews', summary?['drivers_pending_review']?.toString() ?? '—', Icons.fact_check_outlined),
-                _metric('Active pincodes', summary?['pincodes_active']?.toString() ?? '—', Icons.location_on_outlined),
+                _metric('Total rides', summary?['rides_total']?.toString() ?? '—', Icons.route_outlined, onTap: () => context.go('/operations')),
+                _metric('Active rides', summary?['rides_active']?.toString() ?? '—', Icons.directions_car_outlined, onTap: () => context.go('/operations')),
+                _metric('Completed rides', summary?['rides_completed']?.toString() ?? '—', Icons.check_circle_outline, onTap: () => context.go('/operations')),
+                _metric('Registered drivers', summary?['drivers_total']?.toString() ?? '—', Icons.people_outline, onTap: () => context.go('/operations')),
+                _metric('Pending reviews', summary?['drivers_pending_review']?.toString() ?? '—', Icons.fact_check_outlined, onTap: () => context.go('/operations')),
+                _metric('Active pincodes', summary?['pincodes_active']?.toString() ?? '—', Icons.location_on_outlined, onTap: () => context.go('/service-areas')),
               ],
             ),
             const SizedBox(height: 12),
