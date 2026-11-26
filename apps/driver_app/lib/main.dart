@@ -15,6 +15,7 @@ import 'src/home_screen.dart';
 import 'src/navigation_screen.dart';
 import 'src/offer_screen.dart';
 import 'src/driver_section_screen.dart';
+import 'src/driver_theme.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -42,6 +43,7 @@ class _QuickRideDriverBootstrapState extends State<QuickRideDriverBootstrap> {
   }
 
   Future<void> _initialize() async {
+    unawaited(DriverThemeController.restore());
     try {
       QuickRideMaps.configure();
       final environment = QuickRideEnvironment.fromBuildDefines();
@@ -185,11 +187,15 @@ class QuickRideDriverApp extends StatelessWidget {
   ]);
 
   @override
-  Widget build(BuildContext context) => MaterialApp.router(
-        scaffoldMessengerKey: messengerKey,
-        title: 'Alvzyo Driver',
-        theme: QuickRideTheme.light(),
-        darkTheme: QuickRideTheme.dark(),
-        routerConfig: router,
+  Widget build(BuildContext context) => ValueListenableBuilder<ThemeMode>(
+        valueListenable: DriverThemeController.mode,
+        builder: (context, mode, _) => MaterialApp.router(
+          scaffoldMessengerKey: messengerKey,
+          title: 'Alvzyo Driver',
+          theme: QuickRideTheme.light(),
+          darkTheme: QuickRideTheme.dark(),
+          themeMode: mode,
+          routerConfig: router,
+        ),
       );
 }
