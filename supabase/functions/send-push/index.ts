@@ -261,7 +261,14 @@ Deno.serve(async (req: Request) => {
     console.error("FCM token lookup failed", lookupError.message);
     return respond(500, { error: "PUSH_RECIPIENT_LOOKUP_FAILED" });
   }
-  if (!devices?.length) return respond(200, { attempted: 0, sent: 0, stale_tokens_removed: 0 });
+  if (!devices?.length) {
+    return respond(200, {
+      attempted: 0,
+      sent: 0,
+      stale_tokens_removed: 0,
+      message: "No registered devices matched this recipient and application audience.",
+    });
+  }
 
   let accessToken: string;
   try {
