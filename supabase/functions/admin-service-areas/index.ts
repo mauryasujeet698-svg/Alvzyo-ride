@@ -134,7 +134,7 @@ Deno.serve(async (req: Request) => {
         },
         body: JSON.stringify({
           userIds,
-          ...(recipientMode === "self" || appRole === "all" ? {} : { appRole }),
+          ...(appRole === "all" ? {} : { appRole }),
           title,
           body: messageBody,
           data: { notification_source: "admin_console" },
@@ -148,8 +148,17 @@ Deno.serve(async (req: Request) => {
         return fail(502, "Push service returned an unreadable response");
       }
       if (!pushResponse.ok) {
-        console.error("Admin notification send failed", pushResponse.status);
-        return fail(502, "Push delivery service could not send the notification");
+        const detail = typeof delivery.message === "string"
+          ? delivery.message.slice(0, 360)
+          : typeof delivery.error === "string"
+            ? delivery.error
+            : "Push delivery service could not send the notification";
+        console.error("Admin notification send failed", {
+          status: pushResponse.status,
+          code: delivery.code ?? delivery.error ?? "PUSH_SEND_FAILED",
+          detail,
+        });
+        return fail(502, detail);
       }
       await audit(
         "notification.sent",
