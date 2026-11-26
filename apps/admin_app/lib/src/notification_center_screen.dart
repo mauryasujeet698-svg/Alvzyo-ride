@@ -19,7 +19,7 @@ class _AdminNotificationCenterScreenState
     text: 'This is a test notification from the Quick Ride Admin app.',
   );
   final _userIds = TextEditingController();
-  String _appRole = 'customer';
+  String _appRole = 'all';
   String _recipientMode = 'self';
   bool _sending = false;
   String? _error;
