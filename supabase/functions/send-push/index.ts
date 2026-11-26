@@ -111,11 +111,16 @@ async function googleAccessToken(): Promise<string> {
 
   const stsData = await stsResponse.json().catch(() => ({}));
   if (!stsResponse.ok || typeof stsData.access_token !== "string") {
+    const stsError = typeof stsData.error === "string" ? stsData.error : "unknown_error";
+    const description = typeof stsData.error_description === "string"
+      ? stsData.error_description.slice(0, 300)
+      : "Google did not return an error description";
     console.error("Google STS token exchange failed", {
       status: stsResponse.status,
-      error: typeof stsData.error === "string" ? stsData.error : "unknown_error",
+      error: stsError,
+      error_description: description,
     });
-    throw new Error("FCM_WORKLOAD_IDENTITY_EXCHANGE_FAILED");
+    throw new Error("FCM_WORKLOAD_IDENTITY_EXCHANGE_FAILED: " + description);
   }
 
   const impersonationUrl =
@@ -210,8 +215,15 @@ Deno.serve(async (req: Request) => {
   try {
     accessToken = await googleAccessToken();
   } catch (error) {
-    console.error("FCM authorization failed", String(error));
-    return respond(502, { error: "FCM_AUTH_FAILED" });
+    const message = error instanceof Error ? error.message.slice(0, 360) : "FCM authorization failed";
+    console.error("FCM authorization failed", message);
+    return respond(502, {
+      error: "FCM_AUTH_FAILED",
+      code: message.startsWith("FCM_WORKLOAD_IDENTITY_EXCHANGE_FAILED")
+        ? "FCM_WORKLOAD_IDENTITY_EXCHANGE_FAILED"
+        : "FCM_AUTHORIZATION_FAILED",
+      message,
+    });
   }
 
   const results = await Promise.all(devices.map(async (device: { id: string; token: string }) => {
