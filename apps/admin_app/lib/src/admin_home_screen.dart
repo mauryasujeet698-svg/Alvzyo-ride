@@ -151,18 +151,37 @@ class _AdminHomeScreenState extends State<AdminHomeScreen> {
   }
 
   Future<void> loadWithoutBusy() async {
+    final failed = <String>[];
+    Future<Map<String, dynamic>?> loadPart(String action) async {
+      try {
+        return await call(action);
+      } catch (_) {
+        failed.add(action);
+        return null;
+      }
+    }
     final results = await Future.wait([
-      call('list'),
-      call('list_vehicle_categories'),
-      call('list_fare_configs'),
+      loadPart('list'),
+      loadPart('list_vehicle_categories'),
+      loadPart('list_fare_configs'),
     ]);
+    if (results[0] == null) {
+      throw StateError('The service-area directory could not be loaded.');
+    }
     directory = results[0];
-    vehicleCategories = (results[1]['vehicle_categories'] as List<dynamic>? ?? [])
-        .map((item) => Map<String, dynamic>.from(item as Map))
-        .toList();
-    fareConfigs = (results[2]['fare_configs'] as List<dynamic>? ?? [])
-        .map((item) => Map<String, dynamic>.from(item as Map))
-        .toList();
+    if (results[1] != null) {
+      vehicleCategories = (results[1]!['vehicle_categories'] as List<dynamic>? ?? [])
+          .map((item) => Map<String, dynamic>.from(item as Map))
+          .toList();
+    }
+    if (results[2] != null) {
+      fareConfigs = (results[2]!['fare_configs'] as List<dynamic>? ?? [])
+          .map((item) => Map<String, dynamic>.from(item as Map))
+          .toList();
+    }
+    if (failed.isNotEmpty) {
+      errorText = 'Some area settings could not load: ${failed.join(', ')}. The available sections are still usable.';
+    }
     final areas = directory?['service_areas'] as List<dynamic>? ?? [];
     if (selectedAreaId == null && areas.isNotEmpty) {
       selectedAreaId = areas.first['id'].toString();
