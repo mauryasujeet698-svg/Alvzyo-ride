@@ -358,7 +358,7 @@ class _DriverHomeScreenState extends State<DriverHomeScreen> {
   Future<void> _setOnline(bool online) async {
     await _run(() async {
       if (online) {
-        final position = await QuickRideMaps.currentPosition();
+        final position = await QuickRideMaps.currentPosition(forceRefresh: true);
         final result = await _invoke('set_online', {
           'longitude': position.longitude,
           'latitude': position.latitude,
