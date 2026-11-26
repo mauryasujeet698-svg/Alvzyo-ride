@@ -37,6 +37,21 @@ Deno.serve(async (req: Request) => {
     auth: { persistSession: false, autoRefreshToken: false },
   });
 
+  // Never remove an account while either side is in an active trip.
+  const activeStatuses = ["accepted", "driver_arriving", "arrived", "in_progress"];
+  const activeRideChecks = await Promise.all([
+    admin.from("rides").select("id", { count: "exact", head: true })
+      .eq("customer_id", user.id).in("status", activeStatuses),
+    admin.from("rides").select("id", { count: "exact", head: true })
+      .eq("driver_id", user.id).in("status", activeStatuses),
+  ]);
+  if (activeRideChecks.some((item) => item.error)) {
+    return response(503, { error: "ACTIVE_RIDE_CHECK_FAILED" });
+  }
+  if (activeRideChecks.some((item) => (item.count ?? 0) > 0)) {
+    return response(409, { error: "ACTIVE_RIDE_EXISTS", message: "Complete or cancel the active ride before deleting your account." });
+  }
+
   // These relations deliberately restrict hard deletion to retain ride,
   // payment, ledger, safety and support history with referential integrity.
   const checks = await Promise.all([
@@ -52,6 +67,39 @@ Deno.serve(async (req: Request) => {
 
   if (checks.some((item) => item.error)) return response(503, { error: "ACCOUNT_RETENTION_CHECK_FAILED" });
   const retainedRecordCount = checks.reduce((sum, item) => sum + (item.count ?? 0), 0);
+
+  // Driver verification files are personal data, not ride-accounting records.
+  // Remove the private objects and metadata for both permanent deletion and
+  // anonymization paths, then remove device identifiers before deleting auth.
+  const { data: documents, error: documentQueryError } = await admin
+    .from("driver_documents")
+    .select("storage_bucket,object_path")
+    .eq("driver_id", user.id);
+  if (documentQueryError) return response(503, { error: "DRIVER_DOCUMENT_CLEANUP_FAILED" });
+
+  const documentGroups = new Map<string, string[]>();
+  for (const document of documents ?? []) {
+    const bucket = typeof document.storage_bucket === "string" ? document.storage_bucket : "";
+    const objectPath = typeof document.object_path === "string" ? document.object_path : "";
+    if (!bucket || !objectPath) continue;
+    const paths = documentGroups.get(bucket) ?? [];
+    paths.push(objectPath);
+    documentGroups.set(bucket, paths);
+  }
+  for (const [bucket, paths] of documentGroups) {
+    const { error: storageError } = await admin.storage.from(bucket).remove(paths);
+    if (storageError) {
+      console.error("Driver document storage cleanup failed", { bucket, error: storageError.message });
+      return response(503, { error: "DRIVER_DOCUMENT_STORAGE_CLEANUP_FAILED" });
+    }
+  }
+  const { error: documentDeleteError } = await admin
+    .from("driver_documents").delete().eq("driver_id", user.id);
+  if (documentDeleteError) return response(503, { error: "DRIVER_DOCUMENT_METADATA_CLEANUP_FAILED" });
+
+  const { error: tokenDeleteError } = await admin
+    .from("device_push_tokens").delete().eq("user_id", user.id);
+  if (tokenDeleteError) return response(503, { error: "DEVICE_TOKEN_CLEANUP_FAILED" });
 
   if (retainedRecordCount === 0) {
     const { error: deletionError } = await admin.auth.admin.deleteUser(user.id, false);
@@ -69,7 +117,7 @@ Deno.serve(async (req: Request) => {
     return response(503, { error: "ACCOUNT_SIGN_IN_COULD_NOT_BE_BLOCKED" });
   }
 
-  const [{ error: profileError }, { error: tokenError }] = await Promise.all([
+  const [{ error: profileError }, { error: driverError }] = await Promise.all([
     admin.from("profiles").update({
       full_name: null,
       avatar_url: null,
@@ -77,12 +125,15 @@ Deno.serve(async (req: Request) => {
       account_status: "deleted",
       updated_at: new Date().toISOString(),
     }).eq("id", user.id),
-    admin.from("device_push_tokens").delete().eq("user_id", user.id),
+    admin.from("driver_profiles").update({
+      availability_status: "offline",
+      active_pincode_id: null,
+    }).eq("user_id", user.id),
   ]);
-  if (profileError || tokenError) {
+  if (profileError || driverError) {
     console.error("Account blocked but anonymization incomplete", {
       profile: profileError?.message,
-      tokens: tokenError?.message,
+      driver: driverError?.message,
     });
     return response(503, { error: "ACCOUNT_BLOCKED_BUT_CLEANUP_INCOMPLETE" });
   }
