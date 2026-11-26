@@ -150,6 +150,13 @@ class QuickRideNotifications {
     return settings.authorizationStatus.name;
   }
 
+  static Future<String?> getPermissionStatus() async {
+    final messaging = _messaging;
+    if (messaging == null) return null;
+    final settings = await messaging.getNotificationSettings();
+    return settings.authorizationStatus.name;
+  }
+
   static Future<void> _loadInbox() async {
     if (_inboxLoaded) return;
     final prefs = await SharedPreferences.getInstance();
@@ -242,18 +249,25 @@ class QuickRideNotifications {
   static Future<void> _saveToken(String userId, String token) async {
     if (!QuickRideBackend.isInitialized || _appRole == null) return;
     final platform = defaultTargetPlatform == TargetPlatform.iOS ? 'ios' : 'android';
-    try {
-      await QuickRideBackend.client.from('device_push_tokens').upsert({
-        'user_id': userId,
-        'token': token,
-        'app_role': _appRole,
-        'platform': platform,
-        'updated_at': DateTime.now().toUtc().toIso8601String(),
-        'last_seen_at': DateTime.now().toUtc().toIso8601String(),
-      }, onConflict: 'token');
-      debugPrint('Alvzyo push installation registered for app role: $_appRole');
-    } catch (error) {
-      debugPrint('Alvzyo push installation could not be saved for $_appRole: $error');
+    for (var attempt = 0; attempt < 2; attempt++) {
+      try {
+        await QuickRideBackend.client.from('device_push_tokens').upsert({
+          'user_id': userId,
+          'token': token,
+          'app_role': _appRole,
+          'platform': platform,
+          'updated_at': DateTime.now().toUtc().toIso8601String(),
+          'last_seen_at': DateTime.now().toUtc().toIso8601String(),
+        }, onConflict: 'token');
+        debugPrint('Alvzyo push installation registered for app role: $_appRole');
+        return;
+      } catch (error) {
+        if (attempt == 0) {
+          await Future<void>.delayed(const Duration(seconds: 2));
+        } else {
+          debugPrint('Alvzyo push installation could not be saved for $_appRole: $error');
+        }
+      }
     }
   }
 
