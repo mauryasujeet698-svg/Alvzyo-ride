@@ -103,9 +103,7 @@ class _AdminHomeScreenState extends State<AdminHomeScreen> {
     }
     setState(() => _signInBusy = true);
     try {
-      await QuickRideAuth.signInWithGoogle(
-        redirectTo: 'com.alvzyo.ride.admin://login-callback',
-      );
+      await AdminAccess.signIn();
     } catch (error) {
       if (mounted) {
         final details = error.toString();
