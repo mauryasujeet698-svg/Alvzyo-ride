@@ -64,7 +64,9 @@ class QuickRideMaps {
   static String? _postal(String value) =>
       RegExp(r'(?<![0-9])[1-9][0-9]{5}(?![0-9])').firstMatch(value)?.group(0);
 
-  static Future<geo.Position> currentPosition() => _remember(
+  static Future<geo.Position> currentPosition({bool forceRefresh = false}) {
+    if (forceRefresh) _cache.remove('device-current-location');
+    return _remember(
     'device-current-location', const Duration(seconds: 20), () async {
       if (!await geo.Geolocator.isLocationServiceEnabled()) {
         throw StateError('Location services are disabled. Enable GPS and try again.');
@@ -84,6 +86,7 @@ class QuickRideMaps {
       );
     },
   );
+  }
 
   static Stream<geo.Position> watchDriverPosition() => geo.Geolocator.getPositionStream(
     locationSettings: geo.AndroidSettings(
