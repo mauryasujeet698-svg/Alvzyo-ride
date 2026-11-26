@@ -1,4 +1,5 @@
 name: Build Alvzyo Customer, Driver and Admin Release APKs
+# Signed release includes GPS driver activation, driver settings and Admin control-centre fixes.
 on:
   workflow_dispatch:
   push:
