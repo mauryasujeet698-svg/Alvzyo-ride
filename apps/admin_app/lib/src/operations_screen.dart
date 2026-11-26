@@ -88,6 +88,11 @@ class _AdminOperationsScreenState extends State<AdminOperationsScreen> {
     return Map<String, dynamic>.from(response.data as Map);
   }
 
+  String _describeError(Object error) {
+    final details = error.toString().replaceFirst('FunctionException', '').trim();
+    return details.length > 180 ? details.substring(0, 180) : details;
+  }
+
   Future<void> _refreshSafetyEvents() async {
     if (!mounted || _busy || QuickRideAuth.currentUser == null) return;
     try {
@@ -99,7 +104,7 @@ class _AdminOperationsScreenState extends State<AdminOperationsScreen> {
             .toList();
       });
     } catch (error) {
-      if (mounted) setState(() => _error = 'Safety queue could not be refreshed. Check your connection and retry.');
+      if (mounted) setState(() => _error = 'Safety queue failed: ${_describeError(error)}');
     }
   }
 
@@ -165,7 +170,7 @@ class _AdminOperationsScreenState extends State<AdminOperationsScreen> {
       await _call('review_driver_application', {'driverId': id, 'decision': decision});
       await _refresh();
     } catch (error) {
-      if (mounted) setState(() => _error = 'Operations request failed. Please try again.');
+      if (mounted) setState(() => _error = 'Operation failed: ${_describeError(error)}');
     } finally {
       if (mounted) setState(() => _busy = false);
     }
