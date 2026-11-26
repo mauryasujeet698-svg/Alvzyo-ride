@@ -61,21 +61,33 @@ class _QuickRideCustomerBootstrapState extends State<QuickRideCustomerBootstrap>
       final environment = QuickRideEnvironment.fromBuildDefines();
       await QuickRideBackend.initialize(environment);
       if (QuickRideBackend.isInitialized) {
-        // Push setup is optional: a missing Firebase config must not prevent
-        // customers from opening the app or using guest map/search features.
-        await QuickRideNotifications.initialize(appRole: 'customer');
-        QuickRideAuth.beforeSignOutCleanup = QuickRideNotifications.unregisterCurrentDevice;
-        _openedSubscription =
-            QuickRideNotifications.openedMessages.listen(_handleOpenedMessage);
-        _foregroundSubscription =
-            QuickRideNotifications.foregroundMessages.listen(_handleForegroundMessage);
-        final initial = await QuickRideNotifications.consumeInitialMessage();
-        if (initial != null) _handleOpenedMessage(initial);
+        // Do not hold the first screen open for Firebase/FCM setup.
+        unawaited(_initializePushNotifications());
       }
     } catch (error) {
       debugPrint('Quick-Ride Customer startup failed (' + error.runtimeType.toString() + ').');
     } finally {
       if (mounted) setState(() => _ready = true);
+    }
+  }
+
+
+  Future<void> _initializePushNotifications() async {
+    try {
+      await QuickRideNotifications.initialize(appRole: 'customer')
+          .timeout(const Duration(seconds: 8));
+      if (!QuickRideBackend.isInitialized) return;
+      QuickRideAuth.beforeSignOutCleanup =
+          QuickRideNotifications.unregisterCurrentDevice;
+      _openedSubscription =
+          QuickRideNotifications.openedMessages.listen(_handleOpenedMessage);
+      _foregroundSubscription =
+          QuickRideNotifications.foregroundMessages.listen(_handleForegroundMessage);
+      final initial = await QuickRideNotifications.consumeInitialMessage()
+          .timeout(const Duration(seconds: 3));
+      if (initial != null) _handleOpenedMessage(initial);
+    } catch (error) {
+      debugPrint('Customer push setup deferred (${error.runtimeType}).');
     }
   }
 
