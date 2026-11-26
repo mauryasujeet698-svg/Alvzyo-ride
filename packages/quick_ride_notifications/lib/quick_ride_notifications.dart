@@ -88,23 +88,6 @@ class QuickRideNotifications {
       _messaging = FirebaseMessaging.instance;
       FirebaseMessaging.onBackgroundMessage(quickRideFirebaseBackgroundHandler);
 
-      _openedSubscription ??= FirebaseMessaging.onMessageOpenedApp.listen(
-        _openedMessages.add,
-      );
-      _foregroundSubscription ??= FirebaseMessaging.onMessage.listen(
-        _foregroundMessages.add,
-      );
-      _initialMessage = await _messaging!.getInitialMessage()
-          .timeout(const Duration(seconds: 4), onTimeout: () => null);
-
-      _authSubscription ??= QuickRideBackend.client.auth.onAuthStateChange.listen(
-        (state) {
-          final user = state.session?.user;
-          if (user != null) {
-            unawaited(_registerToken());
-          }
-        },
-      );
       // firebase_messaging 17 registers a Firebase Installation ID (FID).
       // The server sends this through FCM HTTP v1's message.fid target.
       // ignore: deprecated_member_use
@@ -127,6 +110,23 @@ class QuickRideNotifications {
         );
       });
 
+      _openedSubscription ??= FirebaseMessaging.onMessageOpenedApp.listen(
+        _openedMessages.add,
+      );
+      _foregroundSubscription ??= FirebaseMessaging.onMessage.listen(
+        _foregroundMessages.add,
+      );
+      _initialMessage = await _messaging!.getInitialMessage()
+          .timeout(const Duration(seconds: 4), onTimeout: () => null);
+
+      _authSubscription ??= QuickRideBackend.client.auth.onAuthStateChange.listen(
+        (state) {
+          final user = state.session?.user;
+          if (user != null) {
+            unawaited(_registerToken());
+          }
+        },
+      );
       _initialized = true;
       final user = QuickRideBackend.client.auth.currentUser;
       // Permission prompts and FID registration must never block startup.
