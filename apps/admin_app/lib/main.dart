@@ -208,7 +208,17 @@ class QuickRideAdminApp extends StatelessWidget {
   static final messengerKey = GlobalKey<ScaffoldMessengerState>();
   const QuickRideAdminApp({super.key});
 
-  static final router = GoRouter(routes: [
+  static final router = GoRouter(
+    errorBuilder: (context, state) => Scaffold(
+      appBar: AppBar(title: const Text('Admin page unavailable')),
+      body: Center(
+        child: Padding(
+          padding: const EdgeInsets.all(24),
+          child: Text('This Admin page could not be opened. Return to the dashboard and try again. ${state.error ?? ''}', textAlign: TextAlign.center),
+        ),
+      ),
+    ),
+    routes: [
     GoRoute(path: '/', builder: (_, __) => const AdminDashboardScreen()),
     GoRoute(path: '/dashboard', builder: (_, __) => const AdminDashboardScreen()),
     GoRoute(path: '/operations', builder: (_, __) => const AdminOperationsScreen()),
@@ -220,7 +230,8 @@ class QuickRideAdminApp extends StatelessWidget {
         section: state.pathParameters['section'] ?? 'about',
       ),
     ),
-  ]);
+    ],
+  );
 
   @override
   Widget build(BuildContext context) => MaterialApp.router(
