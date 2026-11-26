@@ -99,7 +99,11 @@ class _AdminNotificationCenterScreenState
       if (!mounted) return;
       setState(() => _result = data);
     } catch (error) {
-      if (mounted) setState(() => _error = 'Notification could not be sent. Please try again.');
+      if (mounted) {
+        final details = error.toString().replaceFirst('FunctionException', '').trim();
+        final safeDetails = details.length > 220 ? details.substring(0, 220) : details;
+        setState(() => _error = 'Notification failed: $safeDetails');
+      }
     } finally {
       if (mounted) setState(() => _sending = false);
     }
