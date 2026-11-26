@@ -242,14 +242,19 @@ class QuickRideNotifications {
   static Future<void> _saveToken(String userId, String token) async {
     if (!QuickRideBackend.isInitialized || _appRole == null) return;
     final platform = defaultTargetPlatform == TargetPlatform.iOS ? 'ios' : 'android';
-    await QuickRideBackend.client.from('device_push_tokens').upsert({
-      'user_id': userId,
-      'token': token,
-      'app_role': _appRole,
-      'platform': platform,
-      'updated_at': DateTime.now().toUtc().toIso8601String(),
-      'last_seen_at': DateTime.now().toUtc().toIso8601String(),
-    }, onConflict: 'token');
+    try {
+      await QuickRideBackend.client.from('device_push_tokens').upsert({
+        'user_id': userId,
+        'token': token,
+        'app_role': _appRole,
+        'platform': platform,
+        'updated_at': DateTime.now().toUtc().toIso8601String(),
+        'last_seen_at': DateTime.now().toUtc().toIso8601String(),
+      }, onConflict: 'token');
+      debugPrint('Alvzyo push installation registered for app role: $_appRole');
+    } catch (error) {
+      debugPrint('Alvzyo push installation could not be saved for $_appRole: $error');
+    }
   }
 
   static Future<void> unregisterCurrentDevice() async {
