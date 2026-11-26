@@ -40,7 +40,13 @@ class _AdminOperationsScreenState extends State<AdminOperationsScreen> {
   }
 
   Future<void> _refreshAdminAccess() async {
-    final allowed = await AdminAccess.verify();
+    bool allowed = false;
+    try {
+      allowed = await AdminAccess.verify();
+    } catch (error) {
+      if (mounted) setState(() => _error = 'Could not verify Admin access. Check your connection and retry.');
+      return;
+    }
     if (!mounted) return;
     setState(() => _hasAdminAccess = allowed);
     if (allowed) {
@@ -93,40 +99,61 @@ class _AdminOperationsScreenState extends State<AdminOperationsScreen> {
             .toList();
       });
     } catch (error) {
-      if (mounted) setState(() => _error = 'Operations request failed. Please try again.');
+      if (mounted) setState(() => _error = 'Safety queue could not be refreshed. Check your connection and retry.');
     }
   }
 
   Future<void> _refresh() async {
     if (!mounted) return;
     setState(() { _busy = true; _error = null; });
+    final failed = <String>[];
+    Future<Map<String, dynamic>?> load(
+      String action, [Map<String, dynamic> body = const {}]
+    ) async {
+      try {
+        return await _call(action, body);
+      } catch (_) {
+        failed.add(action);
+        return null;
+      }
+    }
+
     try {
       final results = await Future.wait([
-        _call('dashboard_summary'),
-        _call('list_driver_applications'),
-        _call('list_driver_pincode_requests', {'status': 'pending'}),
-        _call('list_support_tickets', {'status': 'active'}),
-        _call('list_safety_events'),
+        load('dashboard_summary'),
+        load('list_driver_applications'),
+        load('list_driver_pincode_requests', {'status': 'pending'}),
+        load('list_support_tickets', {'status': 'active'}),
+        load('list_safety_events'),
       ]);
       if (!mounted) return;
       setState(() {
         _summary = results[0];
-        _drivers = (results[1]['applications'] as List<dynamic>? ?? [])
-            .map((item) => Map<String, dynamic>.from(item as Map))
-            .where((item) => item['verification_status'] == 'pending')
-            .toList();
-        _pincodeRequests = (results[2]['requests'] as List<dynamic>? ?? [])
-            .map((item) => Map<String, dynamic>.from(item as Map))
-            .toList();
-        _supportTickets = (results[3]['tickets'] as List<dynamic>? ?? [])
-            .map((item) => Map<String, dynamic>.from(item as Map))
-            .toList();
-        _safetyEvents = (results[4]['safety_events'] as List<dynamic>? ?? [])
-            .map((item) => Map<String, dynamic>.from(item as Map))
-            .toList();
+        if (results[1] != null) {
+          _drivers = (results[1]!['applications'] as List<dynamic>? ?? [])
+              .map((item) => Map<String, dynamic>.from(item as Map))
+              .where((item) => item['verification_status'] == 'pending')
+              .toList();
+        }
+        if (results[2] != null) {
+          _pincodeRequests = (results[2]!['requests'] as List<dynamic>? ?? [])
+              .map((item) => Map<String, dynamic>.from(item as Map))
+              .toList();
+        }
+        if (results[3] != null) {
+          _supportTickets = (results[3]!['tickets'] as List<dynamic>? ?? [])
+              .map((item) => Map<String, dynamic>.from(item as Map))
+              .toList();
+        }
+        if (results[4] != null) {
+          _safetyEvents = (results[4]!['safety_events'] as List<dynamic>? ?? [])
+              .map((item) => Map<String, dynamic>.from(item as Map))
+              .toList();
+        }
+        _error = failed.isEmpty
+            ? null
+            : 'Some operations sections could not load: ${failed.join(', ')}. Other available sections remain usable.';
       });
-    } catch (error) {
-      if (mounted) setState(() => _error = 'Operations request failed. Please try again.');
     } finally {
       if (mounted) setState(() => _busy = false);
     }
@@ -270,9 +297,7 @@ class _AdminOperationsScreenState extends State<AdminOperationsScreen> {
                 onPressed: QuickRideBackend.isInitialized
                     ? () async {
                         try {
-                          await QuickRideAuth.signInWithGoogle(
-                            redirectTo: 'in.quickride.admin://login-callback',
-                          );
+                          await AdminAccess.signIn();
                         } catch (error) {
                           if (!context.mounted) return;
                           final details = error.toString();
@@ -280,7 +305,7 @@ class _AdminOperationsScreenState extends State<AdminOperationsScreen> {
                               ? details.substring(0, 140)
                               : details;
                           ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(content: Text('Google sign-in failed: $safeDetails')),
+                            SnackBar(content: Text('Admin sign-in failed: $safeDetails')),
                           );
                         }
                       }
