@@ -60,19 +60,45 @@ class _QuickRideAdminBootstrapState extends State<QuickRideAdminBootstrap> {
         );
       }
 
-      // Push notifications are optional for opening the Admin app. Their
-      // initializer handles its own failures and must not block the UI.
-      await QuickRideNotifications.initialize(appRole: 'admin');
-        QuickRideAuth.beforeSignOutCleanup = QuickRideNotifications.unregisterCurrentDevice;
+      // Show the dashboard as soon as Supabase is ready. FCM startup is
+      // independent and runs in the background.
+      unawaited(_initializePushNotifications());
+      if (mounted) {
+        setState(() {
+          _ready = true;
+          _busy = false;
+        });
+      }
+    } catch (error) {
+      debugPrint('Alvzyo Admin startup failed (' + error.runtimeType.toString() + ').');
+      if (mounted) {
+        setState(() {
+          // Keep the complete read-only Admin preview navigable even if the
+          // backend is temporarily unavailable. Live actions remain protected.
+          _error = 'Connection unavailable. You can still explore Admin in read-only mode.';
+          _ready = true;
+          _busy = false;
+        });
+      }
+    }
+  }
 
+
+  Future<void> _initializePushNotifications() async {
+    try {
+      await QuickRideNotifications.initialize(appRole: 'admin')
+          .timeout(const Duration(seconds: 8));
+      if (!QuickRideBackend.isInitialized) return;
+      QuickRideAuth.beforeSignOutCleanup =
+          QuickRideNotifications.unregisterCurrentDevice;
       await _openedSubscription?.cancel();
-      _openedSubscription = QuickRideNotifications.openedMessages.listen((message) {
+      _openedSubscription =
+          QuickRideNotifications.openedMessages.listen((message) {
         unawaited(QuickRideNotifications.recordMessage(message));
         WidgetsBinding.instance.addPostFrameCallback((_) {
           QuickRideAdminApp.router.go('/operations');
         });
       });
-
       await _foregroundSubscription?.cancel();
       _foregroundSubscription =
           QuickRideNotifications.foregroundMessages.listen((message) {
@@ -92,32 +118,16 @@ class _QuickRideAdminBootstrapState extends State<QuickRideAdminBootstrap> {
           ),
         );
       });
-
-      final initial = await QuickRideNotifications.consumeInitialMessage();
+      final initial = await QuickRideNotifications.consumeInitialMessage()
+          .timeout(const Duration(seconds: 3));
       if (initial != null) {
         unawaited(QuickRideNotifications.recordMessage(initial));
         WidgetsBinding.instance.addPostFrameCallback((_) {
           QuickRideAdminApp.router.go('/operations');
         });
       }
-
-      if (mounted) {
-        setState(() {
-          _ready = true;
-          _busy = false;
-        });
-      }
     } catch (error) {
-      debugPrint('Alvzyo Admin startup failed (' + error.runtimeType.toString() + ').');
-      if (mounted) {
-        setState(() {
-          // Keep the complete read-only Admin preview navigable even if the
-          // backend is temporarily unavailable. Live actions remain protected.
-          _error = 'Connection unavailable. You can still explore Admin in read-only mode.';
-          _ready = true;
-          _busy = false;
-        });
-      }
+      debugPrint('Admin push setup deferred (${error.runtimeType}).');
     }
   }
 
