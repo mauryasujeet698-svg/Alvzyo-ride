@@ -47,21 +47,34 @@ class _QuickRideDriverBootstrapState extends State<QuickRideDriverBootstrap> {
       final environment = QuickRideEnvironment.fromBuildDefines();
       await QuickRideBackend.initialize(environment);
       if (QuickRideBackend.isInitialized) {
-        // Notifications are optional for browsing and onboarding.
-        await QuickRideNotifications.initialize(appRole: 'driver');
-        QuickRideAuth.beforeSignOutCleanup = QuickRideNotifications.unregisterCurrentDevice;
-        _openedSubscription =
-            QuickRideNotifications.openedMessages.listen(_handleOpenedMessage);
-        _foregroundSubscription =
-            QuickRideNotifications.foregroundMessages.listen(_handleForegroundMessage);
-        final initial = await QuickRideNotifications.consumeInitialMessage();
-        if (initial != null) _handleOpenedMessage(initial);
+        // FCM setup is optional and must not delay the driver's ride screen.
+        unawaited(_initializePushNotifications());
       }
     } catch (error) {
       debugPrint('Alvzyo Driver startup failed (' + error.runtimeType.toString() + ').');
       _startupError = 'Connection unavailable. Preview mode is active.';
     } finally {
       if (mounted) setState(() => _ready = true);
+    }
+  }
+
+
+  Future<void> _initializePushNotifications() async {
+    try {
+      await QuickRideNotifications.initialize(appRole: 'driver')
+          .timeout(const Duration(seconds: 8));
+      if (!QuickRideBackend.isInitialized) return;
+      QuickRideAuth.beforeSignOutCleanup =
+          QuickRideNotifications.unregisterCurrentDevice;
+      _openedSubscription =
+          QuickRideNotifications.openedMessages.listen(_handleOpenedMessage);
+      _foregroundSubscription =
+          QuickRideNotifications.foregroundMessages.listen(_handleForegroundMessage);
+      final initial = await QuickRideNotifications.consumeInitialMessage()
+          .timeout(const Duration(seconds: 3));
+      if (initial != null) _handleOpenedMessage(initial);
+    } catch (error) {
+      debugPrint('Driver push setup deferred (${error.runtimeType}).');
     }
   }
 
