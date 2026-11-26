@@ -214,7 +214,7 @@ class QuickRideAdminApp extends StatelessWidget {
       body: Center(
         child: Padding(
           padding: const EdgeInsets.all(24),
-          child: Text('This Admin page could not be opened. Return to the dashboard and try again. ${state.error ?? ''}', textAlign: TextAlign.center),
+          child: const Text('This Admin page could not be opened. Return to the dashboard and try again.', textAlign: TextAlign.center),
         ),
       ),
     ),
