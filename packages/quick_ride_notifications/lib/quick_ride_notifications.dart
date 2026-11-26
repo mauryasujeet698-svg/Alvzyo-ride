@@ -58,7 +58,8 @@ class QuickRideNotifications {
     if (!const {'customer', 'driver', 'admin'}.contains(appRole)) {
       throw ArgumentError.value(appRole, 'appRole', 'Unsupported Quick-Ride app role');
     }
-    await _loadInbox();
+    // Local inbox hydration is not required for app startup.
+    unawaited(_loadInbox());
     if (_initialized) return true;
     if (!QuickRideBackend.isInitialized) return false;
 
@@ -93,7 +94,8 @@ class QuickRideNotifications {
       _foregroundSubscription ??= FirebaseMessaging.onMessage.listen(
         _foregroundMessages.add,
       );
-      _initialMessage = await _messaging!.getInitialMessage();
+      _initialMessage = await _messaging!.getInitialMessage()
+          .timeout(const Duration(seconds: 4), onTimeout: () => null);
 
       _authSubscription ??= QuickRideBackend.client.auth.onAuthStateChange.listen(
         (state) {
@@ -127,7 +129,8 @@ class QuickRideNotifications {
 
       _initialized = true;
       final user = QuickRideBackend.client.auth.currentUser;
-      if (user != null) await _registerToken();
+      // Permission prompts and FID registration must never block startup.
+      if (user != null) unawaited(_registerToken());
       return true;
     } catch (error, stack) {
       debugPrint('Quick-Ride push initialization failed: $error\n$stack');
