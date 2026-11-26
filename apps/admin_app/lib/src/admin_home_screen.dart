@@ -80,7 +80,13 @@ class _AdminHomeScreenState extends State<AdminHomeScreen> {
   }
 
   Future<void> _refreshAdminAccess() async {
-    final allowed = await AdminAccess.verify();
+    bool allowed = false;
+    try {
+      allowed = await AdminAccess.verify();
+    } catch (error) {
+      if (mounted) setState(() => errorText = 'Admin authorization could not be checked. Check your connection and retry.');
+      return;
+    }
     if (!mounted) return;
     setState(() {
       _hasAdminAccess = allowed;
@@ -130,7 +136,11 @@ class _AdminHomeScreenState extends State<AdminHomeScreen> {
     try {
       await task();
     } catch (error) {
-      if (mounted) setState(() => errorText = 'Admin request failed. Please try again.');
+      if (mounted) {
+        final details = error.toString().replaceFirst('FunctionException', '').trim();
+        errorText = 'Admin request failed: ${details.length > 160 ? details.substring(0, 160) : details}';
+        setState(() {});
+      }
     } finally {
       if (mounted) setState(() => busy = false);
     }
