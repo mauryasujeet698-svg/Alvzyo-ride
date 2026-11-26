@@ -13,6 +13,7 @@ import 'src/admin_dashboard_screen.dart';
 import 'src/operations_screen.dart';
 import 'src/notification_center_screen.dart';
 import 'src/admin_navigation_drawer.dart';
+import 'src/admin_access.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -58,6 +59,16 @@ class _QuickRideAdminBootstrapState extends State<QuickRideAdminBootstrap> {
         throw StateError(
           'Alvzyo could not initialize its backend. Check the app configuration and try again.',
         );
+      }
+
+      // Existing sessions are rechecked against the protected Admin API.
+      // A non-Admin Google account is signed out before the Admin UI loads.
+      if (QuickRideAuth.currentUser != null) {
+        try {
+          if (!await AdminAccess.verify()) await QuickRideAuth.signOut();
+        } catch (error) {
+          debugPrint('Admin role check deferred (${error.runtimeType}).');
+        }
       }
 
       // Show the dashboard as soon as Supabase is ready. FCM startup is
