@@ -102,6 +102,7 @@ class AdminInfoScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    if (section == 'profile') return const AdminControlCenterScreen();
     final pages = <String, ({String title, String intro, List<String> points})>{
       'profile': (
         title: 'Admin profile',
