@@ -173,14 +173,18 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          if [[ -z "${GOOGLE_WEB_CLIENT_ID//[[:space:]]/}" ]]; then
+          # GitHub secrets can be pasted with surrounding whitespace/newlines.
+          # Normalize only whitespace; keep the actual OAuth client ID unchanged.
+          GOOGLE_WEB_CLIENT_ID="$(printf '%s' "$GOOGLE_WEB_CLIENT_ID" | tr -d '\r\n' | sed -e 's/^[[:space:]]*//' -e 's/[[:space:]]*$//')"
+          if [[ -z "$GOOGLE_WEB_CLIENT_ID" ]]; then
             echo "::error::GOOGLE_WEB_CLIENT_ID is missing."
             exit 1
           fi
           if [[ ! "$GOOGLE_WEB_CLIENT_ID" =~ ^[0-9]+-[A-Za-z0-9_-]+\.apps\.googleusercontent\.com$ ]]; then
-            echo "::error::GOOGLE_WEB_CLIENT_ID is not a valid-looking Web OAuth client ID."
+            echo "::error::GOOGLE_WEB_CLIENT_ID format check failed after whitespace normalization. Verify that the GitHub secret contains the Web application Client ID (not the Client Secret), without quotes or a URL."
             exit 1
           fi
+          echo "GOOGLE_WEB_CLIENT_ID=$GOOGLE_WEB_CLIENT_ID" >> "$GITHUB_ENV"
           signing_values=("$ANDROID_KEYSTORE_BASE64" "$ANDROID_KEYSTORE_PASSWORD" "$ANDROID_KEY_ALIAS" "$ANDROID_KEY_PASSWORD")
           for value in "${signing_values[@]}"; do
             if [[ -z "$value" ]]; then
