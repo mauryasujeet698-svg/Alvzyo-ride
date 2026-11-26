@@ -160,6 +160,58 @@ async function googleAccessToken(): Promise<string> {
 
 Deno.serve(async (req: Request) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
+
+  // Publish standards-compliant OIDC discovery and the matching public JWK.
+  // This allows Google STS to validate this Supabase Edge Function as its IdP.
+  const requestUrl = new URL(req.url);
+  if (req.method === "GET" &&
+      requestUrl.pathname.endsWith("/.well-known/openid-configuration")) {
+    return new Response(JSON.stringify({
+      issuer: WIF_ISSUER,
+      jwks_uri: WIF_ISSUER + "/.well-known/jwks.json",
+      response_types_supported: ["id_token"],
+      subject_types_supported: ["public"],
+      id_token_signing_alg_values_supported: ["RS256"],
+    }), {
+      status: 200,
+      headers: {
+        ...corsHeaders,
+        "Content-Type": "application/json",
+        "Cache-Control": "public, max-age=300",
+      },
+    });
+  }
+  if (req.method === "GET" &&
+      requestUrl.pathname.endsWith("/.well-known/jwks.json")) {
+    try {
+      const privateJwkJson = Deno.env.get("GCP_WIF_PRIVATE_JWK");
+      if (!privateJwkJson) return respond(503, { error: "OIDC_SIGNING_KEY_NOT_CONFIGURED" });
+      const privateJwk = JSON.parse(privateJwkJson) as JsonWebKey & { kid?: string };
+      if (privateJwk.kty !== "RSA" || !privateJwk.n || !privateJwk.e || !privateJwk.kid) {
+        return respond(503, { error: "OIDC_PUBLIC_KEY_NOT_AVAILABLE" });
+      }
+      return new Response(JSON.stringify({
+        keys: [{
+          kty: "RSA",
+          use: "sig",
+          alg: "RS256",
+          kid: privateJwk.kid,
+          n: privateJwk.n,
+          e: privateJwk.e,
+        }],
+      }), {
+        status: 200,
+        headers: {
+          ...corsHeaders,
+          "Content-Type": "application/json",
+          "Cache-Control": "public, max-age=300",
+        },
+      });
+    } catch {
+      return respond(503, { error: "OIDC_PUBLIC_KEY_NOT_AVAILABLE" });
+    }
+  }
+
   if (req.method !== "POST") return respond(405, { error: "METHOD_NOT_ALLOWED" });
 
   const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
