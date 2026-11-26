@@ -69,6 +69,19 @@ class _DriverSectionScreenState extends State<DriverSectionScreen> {
         'Access to driver records is controlled by authenticated account roles and database policies.',
       ],
     ),
+    'terms': (
+      title: 'Terms and conditions',
+      intro: 'These terms describe the basic conditions for using Alvzyo Driver.',
+      details: [
+        'Only the verified account holder may use the Driver app to accept and complete rides.',
+        'Keep your identity, driving licence, vehicle registration and insurance information accurate and current.',
+        'Do not share your account, authentication codes or ride/customer information with unauthorized people.',
+        'Go online only when you are available, physically fit to drive and operating within a serviceable area.',
+        'Follow applicable traffic laws and use the in-app safety controls when required.',
+        'Fares, commissions, subscriptions and settlements are governed by the active commercial rules shown by Alvzyo.',
+        'Alvzyo may restrict access when verification, safety or account-security requirements are not met.',
+      ],
+    ),
     'about': (
       title: 'About Alvzyo Driver',
       intro: 'Alvzyo Driver helps approved driver partners receive, manage and complete customer trips.',
