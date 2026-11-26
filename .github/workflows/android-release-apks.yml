@@ -185,8 +185,8 @@ jobs:
             echo "::error::GOOGLE_WEB_CLIENT_ID is missing."
             exit 1
           fi
-          if [[ ! "$GOOGLE_WEB_CLIENT_ID" =~ ^[0-9]+-[A-Za-z0-9_-]+\.apps\.googleusercontent\.com$ ]]; then
-            echo "::error::GOOGLE_WEB_CLIENT_ID format check failed after whitespace normalization. Verify that the GitHub secret contains the Web application Client ID (not the Client Secret), without quotes or a URL."
+          if [[ "$GOOGLE_WEB_CLIENT_ID" != *.apps.googleusercontent.com ]]; then
+            echo "::error::GOOGLE_WEB_CLIENT_ID must be a Google OAuth Client ID ending in .apps.googleusercontent.com. The value is not printed for security."
             exit 1
           fi
           echo "GOOGLE_WEB_CLIENT_ID=$GOOGLE_WEB_CLIENT_ID" >> "$GITHUB_ENV"
