@@ -277,9 +277,11 @@ class _AdminControlCenterScreenState extends State<AdminControlCenterScreen> {
                                   ? 'Checking server authorization…'
                                   : authorized
                                       ? 'Authorized administrator'
-                                      : user == null
-                                          ? 'Sign in with the approved administrator account'
-                                          : 'This account is not authorized for Admin operations',
+                                      : snapshot.hasError
+                                          ? 'Unable to verify Admin access. Check your connection and retry.'
+                                          : user == null
+                                              ? 'Sign in with the approved administrator account'
+                                              : 'This account is not authorized for Admin operations',
                               style: TextStyle(
                                 color: authorized ? Colors.green : Theme.of(context).colorScheme.error,
                                 fontWeight: FontWeight.w600,
@@ -318,8 +320,12 @@ class _AdminControlCenterScreenState extends State<AdminControlCenterScreen> {
                     if (!authorized)
                       ListTile(
                         leading: const Icon(Icons.login_rounded),
-                        title: Text(_signingIn ? 'Verifying account…' : 'Sign in with approved Admin account'),
-                        onTap: _signingIn ? null : _signIn,
+                        title: Text(_signingIn ? 'Verifying account…' : snapshot.hasError ? 'Retry authorization check' : 'Sign in with approved Admin account'),
+                        onTap: _signingIn
+                            ? null
+                            : snapshot.hasError
+                                ? () => setState(() => _authorization = AdminAccess.verify())
+                                : _signIn,
                       )
                     else
                       ListTile(
