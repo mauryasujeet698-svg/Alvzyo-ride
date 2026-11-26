@@ -20,7 +20,6 @@ class DriverHomeScreen extends StatefulWidget {
 }
 
 class _DriverHomeScreenState extends State<DriverHomeScreen> {
-  final _pincode = TextEditingController();
   final _registration = TextEditingController();
   final _make = TextEditingController();
   final _model = TextEditingController();
@@ -38,6 +37,7 @@ class _DriverHomeScreenState extends State<DriverHomeScreen> {
   StreamSubscription<dynamic>? _authSubscription;
   DateTime _lastLocationSent = DateTime.fromMillisecondsSinceEpoch(0);
   String? _message;
+  String _activePincodeLabel = '';
   List<Map<String, dynamic>> _documents = [];
   bool _loadingDocuments = false;
   String? _uploadingDocumentType;
@@ -70,7 +70,6 @@ class _DriverHomeScreenState extends State<DriverHomeScreen> {
 
   @override
   void dispose() {
-    _pincode.dispose();
     _registration.dispose();
     _make.dispose();
     _model.dispose();
@@ -117,7 +116,11 @@ class _DriverHomeScreenState extends State<DriverHomeScreen> {
     try {
       await work();
     } catch (error) {
-      if (mounted) setState(() => _message = 'The requested action could not be completed. Please try again.');
+      if (mounted) {
+        final details = error.toString().replaceFirst('Exception: ', '').replaceFirst('StateError: ', '');
+        final safeDetails = details.length > 180 ? details.substring(0, 180) : details;
+        setState(() => _message = safeDetails.isEmpty ? 'The requested action could not be completed. Please try again.' : safeDetails);
+      }
     } finally {
       if (mounted) setState(() => _busy = false);
     }
@@ -139,22 +142,10 @@ class _DriverHomeScreenState extends State<DriverHomeScreen> {
         'vehicleModel': _model.text.trim(),
         'vehicleColor': _color.text.trim(),
       });
-      await _requestPincode();
       await _loadDocuments();
       if (mounted) {
-        setState(() => _message = 'Application submitted. Admin review is required before you can go online.');
+        setState(() => _message = 'Application submitted. Admin review is required before you can go online. Your service area will be detected automatically using GPS.');
       }
-    });
-  }
-
-  Future<void> _requestPincode() async {
-    final pin = _pincode.text.trim();
-    if (!RegExp(r'^[1-9][0-9]{5}$').hasMatch(pin)) {
-      throw StateError('Enter a valid six-digit service pincode.');
-    }
-    await _invoke('request_service_pincode', {
-      'pincode': pin,
-      'isPrimary': true,
     });
   }
 
@@ -367,16 +358,38 @@ class _DriverHomeScreenState extends State<DriverHomeScreen> {
   Future<void> _setOnline(bool online) async {
     await _run(() async {
       if (online) {
-        await _invoke('set_online', {'pincode': _pincode.text.trim()});
-        _online = true;
+        final position = await QuickRideMaps.currentPosition();
+        final result = await _invoke('set_online', {
+          'longitude': position.longitude,
+          'latitude': position.latitude,
+          'accuracyM': position.accuracy,
+        });
+        final availability = Map<String, dynamic>.from(
+          result['availability'] as Map? ?? const {},
+        );
+        final accepted = availability['online'] == true;
+        _online = accepted;
+        _activePincodeLabel = availability['pincode']?.toString() ?? '';
+        if (!accepted) {
+          if (mounted) {
+            setState(() => _message = availability['message']?.toString() ??
+                'Alvzyo is not serviceable at your current location.');
+          }
+          return;
+        }
         _startLocationUpdates();
+        if (mounted) {
+          setState(() => _message = availability['message']?.toString() ??
+              'You are online and ready to receive rides.');
+        }
       } else {
         await _invoke('set_offline');
         _online = false;
+        _activePincodeLabel = '';
         await _locationSubscription?.cancel();
         _locationSubscription = null;
+        if (mounted) setState(() => _message = 'You are offline.');
       }
-      if (mounted) setState(() => _message = online ? 'You are online.' : 'You are offline.');
     });
   }
 
@@ -399,7 +412,7 @@ class _DriverHomeScreenState extends State<DriverHomeScreen> {
             .maybeSingle();
         if (!mounted) return;
         final pin = row?['pincode']?.toString();
-        if (pin != null && pin.isNotEmpty) _pincode.text = pin;
+        _activePincodeLabel = pin ?? '';
         if (!_online) setState(() => _online = true);
         _startLocationUpdates();
       } else {
@@ -740,7 +753,7 @@ class _DriverHomeScreenState extends State<DriverHomeScreen> {
         padding: const EdgeInsets.all(20),
         children: [
           Text('Driver onboarding', style: Theme.of(context).textTheme.headlineSmall),
-          const Text('Submit your vehicle details and the pincode where you want to operate. Admin approval is required.'),
+          const Text('Submit your vehicle details. Your operating area is detected automatically from GPS when you go online after approval.'),
           const SizedBox(height: 16),
           DropdownButtonFormField<int>(
             initialValue: _categoryId,
@@ -760,12 +773,6 @@ class _DriverHomeScreenState extends State<DriverHomeScreen> {
           const SizedBox(height: 8),
           TextField(controller: _color, decoration: const InputDecoration(labelText: 'Vehicle colour (optional)')),
           const SizedBox(height: 8),
-          TextField(
-            controller: _pincode,
-            keyboardType: TextInputType.number,
-            maxLength: 6,
-            decoration: const InputDecoration(labelText: 'Operating pincode', counterText: ''),
-          ),
           if (_message != null) Text(_message!),
           FilledButton(
             onPressed: _busy || _categories.isEmpty ? null : _apply,
@@ -779,20 +786,10 @@ class _DriverHomeScreenState extends State<DriverHomeScreen> {
         children: [
           const Icon(Icons.hourglass_top, size: 48),
           Text('Driver application: $status', style: Theme.of(context).textTheme.headlineSmall),
-          const Text('Admin verification, approved documents and service-pincode approval are required before going online.'),
+          const Text('Admin verification and approved documents are required before going online. Your service area will be detected automatically from GPS.'),
           const SizedBox(height: 12),
           _documentsPanel(),
           const SizedBox(height: 12),
-          TextField(
-            controller: _pincode,
-            keyboardType: TextInputType.number,
-            maxLength: 6,
-            decoration: const InputDecoration(labelText: 'Request another service pincode', counterText: ''),
-          ),
-          OutlinedButton(
-            onPressed: _busy ? null : () => _run(_requestPincode),
-            child: const Text('Request service pincode'),
-          ),
           if (_message != null) Text(_message!),
         ],
       );
@@ -806,11 +803,13 @@ class _DriverHomeScreenState extends State<DriverHomeScreen> {
               Text(_online ? 'You are online' : 'You are offline',
                   style: Theme.of(context).textTheme.titleLarge),
               const SizedBox(height: 8),
-              TextField(
-                controller: _pincode,
-                keyboardType: TextInputType.number,
-                maxLength: 6,
-                decoration: const InputDecoration(labelText: 'Approved operating pincode', counterText: ''),
+              ListTile(
+                contentPadding: EdgeInsets.zero,
+                leading: const Icon(Icons.my_location_outlined),
+                title: const Text('Detected service area'),
+                subtitle: Text(_activePincodeLabel.isEmpty
+                    ? 'Automatically checked when you go online'
+                    : 'Pincode $_activePincodeLabel'),
               ),
               Wrap(spacing: 8, children: [
                 FilledButton(
