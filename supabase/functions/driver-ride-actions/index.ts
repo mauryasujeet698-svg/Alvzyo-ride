@@ -403,13 +403,33 @@ Deno.serve(async (req: Request) => {
       });
     }
 
-    if (action === "set_online" || action === "set_offline") {
-      const pincode = action === "set_online" ? body.pincode : null;
-      if (action === "set_online" && !isPincode(pincode)) return fail(400, "INVALID_PINCODE", "Choose an approved service pincode");
+    if (action === "set_online") {
+      const longitude = body.longitude;
+      const latitude = body.latitude;
+      const accuracy = body.accuracyM;
+      if (typeof longitude !== "number" || !Number.isFinite(longitude) ||
+          typeof latitude !== "number" || !Number.isFinite(latitude)) {
+        return fail(400, "LOCATION_REQUIRED", "A current GPS location is required to go online");
+      }
+      if (typeof accuracy !== "number" || !Number.isFinite(accuracy)) {
+        return fail(400, "LOCATION_ACCURACY_REQUIRED", "GPS accuracy could not be verified. Try again in an open area");
+      }
+      const { data, error } = await db.rpc("set_driver_availability_by_location", {
+        p_driver_id: user.id,
+        p_longitude: longitude,
+        p_latitude: latitude,
+        p_accuracy_m: accuracy,
+        p_online: true,
+      });
+      if (error) return fail(409, "AVAILABILITY_UPDATE_FAILED", error.message);
+      return respond(200, { availability: data });
+    }
+
+    if (action === "set_offline") {
       const { data, error } = await db.rpc("set_driver_availability", {
         p_driver_id: user.id,
-        p_pincode: pincode,
-        p_online: action === "set_online",
+        p_pincode: null,
+        p_online: false,
       });
       if (error) return fail(409, "AVAILABILITY_UPDATE_FAILED", error.message);
       return respond(200, { availability: data });
