@@ -7,6 +7,12 @@ on:
       - main
     paths:
       - ".github/workflows/android-release-apks.yml"
+      - "apps/**"
+      - "packages/**"
+      - "supabase/functions/**"
+      - "supabase/migrations/**"
+      - "pubspec.yaml"
+      - "pubspec.lock"
 permissions:
   contents: read
 jobs:
