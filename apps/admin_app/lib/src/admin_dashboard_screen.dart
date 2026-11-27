@@ -191,25 +191,6 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                 _metric('Active pincodes', summary?['pincodes_active']?.toString() ?? '—', Icons.location_on_outlined, onTap: () => context.go('/service-areas')),
               ],
             ),
-            const SizedBox(height: 12),
-            Card(
-              child: ListTile(
-                leading: const Icon(Icons.monitor_heart_outlined),
-                title: const Text('Operations centre'),
-                subtitle: const Text('Driver approvals, rides, support and safety queues'),
-                trailing: const Icon(Icons.chevron_right),
-                onTap: () => context.go('/operations'),
-              ),
-            ),
-            Card(
-              child: ListTile(
-                leading: const Icon(Icons.location_city_outlined),
-                title: const Text('Service areas and fares'),
-                subtitle: const Text('Pincodes, vehicle categories and commercial rules'),
-                trailing: const Icon(Icons.chevron_right),
-                onTap: () => context.go('/service-areas'),
-              ),
-            ),
           ],
         ),
       ),
