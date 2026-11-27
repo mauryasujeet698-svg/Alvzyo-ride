@@ -17,6 +17,21 @@ import 'src/admin_access.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  ErrorWidget.builder = (details) {
+    debugPrint('Admin screen rendering error: ${details.exceptionAsString()}');
+    return const Material(
+      color: Colors.white,
+      child: Center(
+        child: Padding(
+          padding: EdgeInsets.all(24),
+          child: Text(
+            'This Admin screen could not be displayed. Return to Home and refresh.',
+            textAlign: TextAlign.center,
+          ),
+        ),
+      ),
+    );
+  };
 
   // Render Flutter immediately. Backend/plugin startup must never leave the
   // Android launch window sitting on a blank screen.
