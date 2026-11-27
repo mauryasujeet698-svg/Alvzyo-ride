@@ -801,7 +801,7 @@ Deno.serve(async (req: Request) => {
     if (action === "list_support_tickets") {
       const requestedStatus = typeof body.status === "string" ? body.status : "active";
       let request = admin.from("ride_support_tickets")
-        .select("id,ride_id,submitted_by,category,subject,description,status,priority,assigned_to,created_at,updated_at,rides(id,status,pickup_address,destination_address)")
+        .select("id,ride_id,submitted_by,category,subject,description,status,priority,assigned_to,created_at,updated_at,admin_response,admin_responded_at,rides(id,status,pickup_address,destination_address)")
         .order("created_at", { ascending: false }).limit(100);
       if (requestedStatus === "active") {
         request = request.in("status", ["open", "in_progress", "waiting_for_customer"]);
@@ -839,10 +839,21 @@ Deno.serve(async (req: Request) => {
       const { data: before, error: readError } = await admin.from("ride_support_tickets")
         .select("*").eq("id", ticketId).maybeSingle();
       if (readError || !before) return fail(404, "Support ticket not found");
+      const responseText = typeof body.responseText === "string"
+        ? body.responseText.trim().slice(0, 4000)
+        : undefined;
       const updates: Record<string, unknown> = {
         status,
         ...(priority === undefined ? {} : { priority }),
+        ...(responseText === undefined ? {} : {
+          admin_response: responseText,
+          admin_responded_at: new Date().toISOString(),
+          admin_responded_by: user.id,
+        }),
       };
+      if (responseText !== undefined && responseText.length < 2) {
+        return fail(400, "Write a reply before sending it to the customer");
+      }
       const { data, error } = await admin.from("ride_support_tickets")
         .update(updates).eq("id", ticketId).select("*").single();
       if (error) return fail(400, "Unable to update support ticket");
@@ -855,7 +866,7 @@ Deno.serve(async (req: Request) => {
         admin.from("rides").select("id", { count: "exact", head: true }),
         admin.from("rides").select("id", { count: "exact", head: true }).in("status", ["accepted", "driver_arriving", "arrived", "in_progress"]),
         admin.from("rides").select("id", { count: "exact", head: true }).eq("status", "completed"),
-        admin.from("driver_profiles").select("user_id", { count: "exact", head: true }),
+        admin.from("driver_profiles").select("user_id", { count: "exact", head: true }).eq("verification_status", "approved"),
         admin.from("driver_profiles").select("user_id", { count: "exact", head: true }).eq("verification_status", "pending"),
         admin.from("service_area_pincodes").select("id", { count: "exact", head: true }).eq("is_active", true),
         admin.from("ride_commissions").select("commission_amount,currency"),
