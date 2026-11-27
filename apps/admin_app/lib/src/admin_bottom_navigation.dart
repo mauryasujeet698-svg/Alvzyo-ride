@@ -11,19 +11,17 @@ class AdminBottomNavigationBar extends StatelessWidget {
     '/operations',
     '/service-areas',
     '/notifications',
-    '/info/profile',
   ];
 
   @override
   Widget build(BuildContext context) => NavigationBar(
-        selectedIndex: currentIndex,
+        selectedIndex: currentIndex.clamp(0, 3),
         onDestinationSelected: (index) => context.go(_routes[index]),
         destinations: const [
-          NavigationDestination(icon: Icon(Icons.dashboard_outlined), selectedIcon: Icon(Icons.dashboard), label: 'Dashboard'),
+          NavigationDestination(icon: Icon(Icons.dashboard_outlined), selectedIcon: Icon(Icons.dashboard), label: 'Home'),
           NavigationDestination(icon: Icon(Icons.monitor_heart_outlined), selectedIcon: Icon(Icons.monitor_heart), label: 'Operations'),
           NavigationDestination(icon: Icon(Icons.location_city_outlined), selectedIcon: Icon(Icons.location_city), label: 'Areas'),
           NavigationDestination(icon: Icon(Icons.notifications_outlined), selectedIcon: Icon(Icons.notifications), label: 'Alerts'),
-          NavigationDestination(icon: Icon(Icons.admin_panel_settings_outlined), selectedIcon: Icon(Icons.admin_panel_settings), label: 'Control'),
         ],
       );
 }
