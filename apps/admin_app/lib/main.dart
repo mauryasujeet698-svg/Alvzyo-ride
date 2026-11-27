@@ -226,9 +226,11 @@ class QuickRideAdminApp extends StatelessWidget {
     GoRoute(path: '/notifications', builder: (_, __) => const AdminNotificationCenterScreen()),
     GoRoute(
       path: '/info/:section',
-      builder: (_, state) => AdminInfoScreen(
-        section: state.pathParameters['section'] ?? 'about',
-      ),
+      builder: (_, state) {
+        final section = state.pathParameters['section'] ?? 'about';
+        if (section == 'support') return const AdminOperationsScreen(supportOnly: true);
+        return AdminInfoScreen(section: section);
+      },
     ),
     ],
   );
