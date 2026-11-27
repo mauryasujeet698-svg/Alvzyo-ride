@@ -9,7 +9,8 @@ import 'admin_access.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 class AdminOperationsScreen extends StatefulWidget {
-  const AdminOperationsScreen({super.key});
+  const AdminOperationsScreen({super.key, this.supportOnly = false});
+  final bool supportOnly;
   @override
   State<AdminOperationsScreen> createState() => _AdminOperationsScreenState();
 }
@@ -510,7 +511,7 @@ class _AdminOperationsScreenState extends State<AdminOperationsScreen> {
     return Scaffold(
       drawer: const AdminNavigationDrawer(),
       appBar: AppBar(
-        title: const Text('Operations'),
+        title: Text(widget.supportOnly ? 'Help & support' : 'Operations'),
         leading: Builder(builder: (context) => IconButton(onPressed: () => Scaffold.of(context).openDrawer(), icon: const Icon(Icons.menu))),
         actions: [IconButton(onPressed: _busy ? null : _refresh, icon: const Icon(Icons.refresh))],
       ),
@@ -520,6 +521,7 @@ class _AdminOperationsScreenState extends State<AdminOperationsScreen> {
         child: ListView(
           padding: const EdgeInsets.all(16),
           children: [
+            if (!widget.supportOnly) ...[
             Text('Platform pulse', style: Theme.of(context).textTheme.headlineSmall),
             const SizedBox(height: 10),
             GridView.count(
@@ -798,7 +800,8 @@ class _AdminOperationsScreenState extends State<AdminOperationsScreen> {
                 );
               }),
             const SizedBox(height: 24),
-            Text('Customer support tickets', style: Theme.of(context).textTheme.titleLarge),
+            ],
+                        Text('Customer support tickets', style: Theme.of(context).textTheme.titleLarge),
             const SizedBox(height: 6),
             const Text('Review ride-related and general customer requests. Update the ticket status as your team handles it.'),
             if (_supportTickets.isEmpty)
