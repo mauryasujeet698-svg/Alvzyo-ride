@@ -45,16 +45,10 @@ class AdminNavigationDrawer extends StatelessWidget {
                 ),
               ),
             ),
-            _entry(context, Icons.dashboard_outlined, 'Dashboard', '/dashboard'),
-            _entry(context, Icons.monitor_heart_outlined, 'Operations', '/operations'),
-            _entry(context, Icons.location_city_outlined, 'Service areas & fares', '/service-areas'),
-            _entry(context, Icons.notifications_active_outlined, 'Notifications', '/notifications'),
             const Divider(),
             _entry(context, Icons.admin_panel_settings_outlined, 'Control centre', '/info/profile'),
             _entry(context, Icons.settings_outlined, 'Settings', '/info/settings'),
             _entry(context, Icons.support_agent_outlined, 'Help & support', '/info/support'),
-            _entry(context, Icons.privacy_tip_outlined, 'Privacy policy', '/info/privacy'),
-            _entry(context, Icons.info_outline_rounded, 'About Alvzyo Admin', '/info/about'),
             const Divider(),
             if (user == null)
               ListTile(
@@ -250,7 +244,6 @@ class _AdminControlCenterScreenState extends State<AdminControlCenterScreen> {
           ),
         ],
       ),
-      bottomNavigationBar: const AdminBottomNavigationBar(currentIndex: 4),
       body: FutureBuilder<bool>(
         future: _authorization,
         builder: (context, snapshot) {
@@ -296,12 +289,6 @@ class _AdminControlCenterScreenState extends State<AdminControlCenterScreen> {
                 ),
               ),
               const SizedBox(height: 18),
-              Text('Platform management', style: Theme.of(context).textTheme.titleLarge),
-              const SizedBox(height: 8),
-              _shortcut(context, Icons.monitor_heart_outlined, 'Operations centre', 'Driver reviews, rides, support and safety queues', '/operations'),
-              _shortcut(context, Icons.location_city_outlined, 'Service areas and fares', 'Operating areas, pincode boundaries, vehicle categories and fare rules', '/service-areas'),
-              _shortcut(context, Icons.notifications_active_outlined, 'Notification control', 'Send test messages and review delivery results', '/notifications'),
-              const SizedBox(height: 18),
               Text('Security and account', style: Theme.of(context).textTheme.titleLarge),
               const SizedBox(height: 8),
               Card(
@@ -341,11 +328,9 @@ class _AdminControlCenterScreenState extends State<AdminControlCenterScreen> {
                 ),
               ),
               const SizedBox(height: 18),
-              Text('Platform information', style: Theme.of(context).textTheme.titleLarge),
+              Text('Admin assistance', style: Theme.of(context).textTheme.titleLarge),
               const SizedBox(height: 8),
-              _shortcut(context, Icons.support_agent_outlined, 'Help and support', 'Operational support and issue handling', '/info/support'),
-              _shortcut(context, Icons.privacy_tip_outlined, 'Privacy policy', 'How Alvzyo protects account and ride information', '/info/privacy'),
-              _shortcut(context, Icons.info_outline, 'About Alvzyo Admin', 'Platform and Admin app information', '/info/about'),
+              _shortcut(context, Icons.support_agent_outlined, 'Help and support', 'Unresolved customer and driver cases, replies and status updates', '/info/support'),
             ],
           );
         },
