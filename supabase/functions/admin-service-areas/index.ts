@@ -970,6 +970,33 @@ Deno.serve(async (req: Request) => {
         .update(updates).eq("id", ticketId).select("*").single();
       if (error) return fail(400, "Unable to update support ticket");
       await audit("support_ticket.updated", "ride_support_tickets", ticketId, before, data);
+      if (responseText !== undefined) {
+        try {
+          const { data: roles } = await admin.from("user_roles")
+            .select("role").eq("user_id", before.submitted_by)
+            .in("role", ["customer", "driver"]);
+          const audience = (roles ?? []).some((row) => row.role === "driver") ? "driver" : "customer";
+          const push = await fetch(`${supabaseUrl}/functions/v1/send-push`, {
+            method: "POST",
+            headers: {
+              Authorization: `Bearer ${serviceRoleKey}`,
+              apikey: serviceRoleKey,
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({
+              userIds: [String(before.submitted_by)],
+              appRole: audience,
+              title: "Alvzyo Support replied",
+              body: responseText.slice(0, 180),
+              data: { notification_source: "support_reply", ticket_id: ticketId },
+            }),
+            signal: AbortSignal.timeout(15000),
+          });
+          if (!push.ok) console.error("Support reply saved but push notification failed", push.status);
+        } catch (pushError) {
+          console.error("Support reply saved but notification could not be sent", String(pushError));
+        }
+      }
       return response(200, { ticket: data });
     }
 
