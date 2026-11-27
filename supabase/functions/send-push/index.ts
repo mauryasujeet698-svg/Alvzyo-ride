@@ -80,10 +80,12 @@ async function signWorkloadAssertion(privateJwkJson: string, audience: string): 
   return unsigned + "." + base64Url(signature);
 }
 
-function pemBytes(pem: string): Uint8Array {
+function pemBytes(pem: string): ArrayBuffer {
   const body = pem.replace(/-----BEGIN PRIVATE KEY-----|-----END PRIVATE KEY-----|\\s/g, "");
   const binary = atob(body);
-  return Uint8Array.from(binary, (character) => character.charCodeAt(0));
+  const bytes = new Uint8Array(binary.length);
+  for (let index = 0; index < binary.length; index++) bytes[index] = binary.charCodeAt(index);
+  return bytes.buffer as ArrayBuffer;
 }
 
 async function serviceAccountAccessToken(): Promise<string> {
@@ -206,7 +208,7 @@ async function googleAccessToken(): Promise<string> {
     cachedAccessTokenExpiresAt = Number.isFinite(expiry)
       ? Math.floor(expiry / 1000)
       : now + 50 * 60;
-    return cachedAccessToken;
+    return cachedAccessToken!;
   } catch (wifError) {
     console.error("FCM Workload Identity failed; trying configured service-account fallback", {
       reason: wifError instanceof Error ? wifError.message.slice(0, 240) : "unknown",
