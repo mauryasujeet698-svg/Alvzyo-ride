@@ -17,6 +17,8 @@ class AdminOperationsScreen extends StatefulWidget {
 class _AdminOperationsScreenState extends State<AdminOperationsScreen> {
   Map<String, dynamic>? _summary;
   List<Map<String, dynamic>> _drivers = [];
+  List<Map<String, dynamic>> _registeredDrivers = [];
+  final Map<String, TextEditingController> _supportReplyControllers = {};
   List<Map<String, dynamic>> _pincodeRequests = [];
   List<Map<String, dynamic>> _supportTickets = [];
   List<Map<String, dynamic>> _safetyEvents = [];
@@ -58,6 +60,7 @@ class _AdminOperationsScreenState extends State<AdminOperationsScreen> {
       setState(() {
         _summary = null;
         _drivers = [];
+        _registeredDrivers = [];
         _pincodeRequests = [];
         _supportTickets = [];
         _safetyEvents = [];
@@ -77,6 +80,7 @@ class _AdminOperationsScreenState extends State<AdminOperationsScreen> {
   void dispose() {
     _refreshTimer?.cancel();
     _authSubscription?.cancel();
+    for (final controller in _supportReplyControllers.values) { controller.dispose(); }
     super.dispose();
   }
 
@@ -135,10 +139,13 @@ class _AdminOperationsScreenState extends State<AdminOperationsScreen> {
       setState(() {
         _summary = results[0];
         if (results[1] != null) {
-          _drivers = (results[1]!['applications'] as List<dynamic>? ?? [])
-              .map((item) => Map<String, dynamic>.from(item as Map))
-              .where((item) => item['verification_status'] == 'pending')
-              .toList();
+          final applications = (results[1]!['applications'] as List<dynamic>? ?? [])
+              .map((item) => Map<String, dynamic>.from(item as Map)).toList();
+          _drivers = applications.where((item) => item['verification_status'] == 'pending').toList();
+          _registeredDrivers = applications.where((item) =>
+              item['verification_status'] == 'approved' ||
+              item['verification_status'] == 'suspended' ||
+              item['verification_status'] == 'rejected').toList();
         }
         if (results[2] != null) {
           _pincodeRequests = (results[2]!['requests'] as List<dynamic>? ?? [])
@@ -206,16 +213,98 @@ class _AdminOperationsScreenState extends State<AdminOperationsScreen> {
     }
   }
 
-  Future<void> _updateSupportTicket(String id, String status) async {
+  Future<void> _updateSupportTicket(String id, String status, {String? responseText}) async {
     setState(() { _busy = true; _error = null; });
     try {
       await _call('update_support_ticket', {
         'ticketId': id,
         'status': status,
+        if (responseText != null) 'responseText': responseText,
+      });
+      if (responseText != null) _supportReplyControllers[id]?.clear();
+      await _refresh();
+    } catch (error) {
+      if (mounted) setState(() => _error = 'Support update failed: ${_describeError(error)}');
+    } finally {
+      if (mounted) setState(() => _busy = false);
+    }
+  }
+
+  Future<void> _editDriver(Map<String, dynamic> driver) async {
+    final id = driver['user_id'].toString();
+    final make = TextEditingController(text: driver['vehicle_make']?.toString() ?? '');
+    final model = TextEditingController(text: driver['vehicle_model']?.toString() ?? '');
+    final color = TextEditingController(text: driver['vehicle_color']?.toString() ?? '');
+    final registration = TextEditingController(text: driver['vehicle_registration']?.toString() ?? '');
+    try {
+      final save = await showDialog<bool>(
+        context: context,
+        builder: (dialogContext) => AlertDialog(
+          title: const Text('Edit driver details'),
+          content: SizedBox(width: 420, child: SingleChildScrollView(child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              TextField(controller: make, decoration: const InputDecoration(labelText: 'Vehicle make')),
+              TextField(controller: model, decoration: const InputDecoration(labelText: 'Vehicle model')),
+              TextField(controller: color, decoration: const InputDecoration(labelText: 'Vehicle colour')),
+              TextField(controller: registration, decoration: const InputDecoration(labelText: 'Registration number')),
+            ],
+          ))),
+          actions: [
+            TextButton(onPressed: () => Navigator.pop(dialogContext, false), child: const Text('Cancel')),
+            FilledButton(onPressed: () => Navigator.pop(dialogContext, true), child: const Text('Save changes')),
+          ],
+        ),
+      );
+      if (save != true) return;
+      setState(() { _busy = true; _error = null; });
+      await _call('update_driver_profile', {
+        'driverId': id,
+        'vehicle_make': make.text.trim(),
+        'vehicle_model': model.text.trim(),
+        'vehicle_color': color.text.trim(),
+        'vehicle_registration': registration.text.trim(),
       });
       await _refresh();
     } catch (error) {
-      if (mounted) setState(() => _error = 'Operations request failed. Please try again.');
+      if (mounted) setState(() => _error = 'Driver update failed: ${_describeError(error)}');
+    } finally {
+      make.dispose(); model.dispose(); color.dispose(); registration.dispose();
+      if (mounted) setState(() => _busy = false);
+    }
+  }
+
+  Future<void> _setDriverStatus(String id, String status) async {
+    setState(() { _busy = true; _error = null; });
+    try {
+      await _call('set_driver_verification_status', {'driverId': id, 'status': status});
+      await _refresh();
+    } catch (error) {
+      if (mounted) setState(() => _error = 'Driver status update failed: ${_describeError(error)}');
+    } finally {
+      if (mounted) setState(() => _busy = false);
+    }
+  }
+
+  Future<void> _deleteDriver(String id) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('Delete driver account?'),
+        content: const Text('This permanently deletes the driver login and private verification files only when the account has no ride or support history. Accounts with history must be suspended instead.'),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(dialogContext, false), child: const Text('Cancel')),
+          FilledButton(onPressed: () => Navigator.pop(dialogContext, true), child: const Text('Delete account')),
+        ],
+      ),
+    );
+    if (confirmed != true) return;
+    setState(() { _busy = true; _error = null; });
+    try {
+      await _call('delete_driver_account', {'driverId': id});
+      await _refresh();
+    } catch (error) {
+      if (mounted) setState(() => _error = 'Driver was not deleted: ${_describeError(error)}');
     } finally {
       if (mounted) setState(() => _busy = false);
     }
@@ -256,16 +345,38 @@ class _AdminOperationsScreenState extends State<AdminOperationsScreen> {
 
   Future<void> _openDocument(String? url) async {
     if (url == null || url.isEmpty) {
-      if (mounted) setState(() => _error = 'A document preview link is not available.');
+      if (mounted) setState(() => _error = 'The private document preview link could not be generated. Refresh and try again.');
       return;
     }
-    final opened = await launchUrl(
-      Uri.parse(url),
-      mode: LaunchMode.externalApplication,
+    await showDialog<void>(
+      context: context,
+      builder: (dialogContext) => Dialog(
+        child: SizedBox(
+          width: 560,
+          height: MediaQuery.of(dialogContext).size.height * 0.78,
+          child: Column(children: [
+            AppBar(title: const Text('Verification document'), automaticallyImplyLeading: false,
+              actions: [IconButton(onPressed: () => Navigator.pop(dialogContext), icon: const Icon(Icons.close))]),
+            Expanded(child: InteractiveViewer(
+              minScale: 0.7, maxScale: 4,
+              child: Center(child: Image.network(
+                url, fit: BoxFit.contain,
+                loadingBuilder: (context, child, progress) => progress == null ? child :
+                  const Center(child: CircularProgressIndicator()),
+                errorBuilder: (context, error, stack) => const Padding(
+                  padding: EdgeInsets.all(24),
+                  child: Text('This file could not be displayed as an image. Check the file link or open it externally.'),
+                ),
+              )),
+            )),
+            Padding(padding: const EdgeInsets.all(12), child: TextButton.icon(
+              onPressed: () => launchUrl(Uri.parse(url), mode: LaunchMode.externalApplication),
+              icon: const Icon(Icons.open_in_new), label: const Text('Open full file'),
+            )),
+          ]),
+        ),
+      ),
     );
-    if (!opened && mounted) {
-      setState(() => _error = 'The document preview could not be opened.');
-    }
   }
 
   Widget _metric(String label, Object? value, IconData icon) => Card(
@@ -452,8 +563,10 @@ class _AdminOperationsScreenState extends State<AdminOperationsScreen> {
                     (driver['vehicle_registration'] ?? '').toString();
                 return Card(
                   child: ExpansionTile(
-                    title: Text('Driver ' + shortId),
-                    subtitle: Text(vehicle),
+                    title: Text((driver['profile']?['full_name']?.toString().trim().isNotEmpty == true)
+                        ? driver['profile']['full_name'].toString()
+                        : 'Driver ' + shortId),
+                    subtitle: Text('${driver['profile']?['phone_e164'] ?? 'Phone not provided'} · $vehicle'),
                     children: [
                       if (docs.isEmpty)
                         const ListTile(
@@ -484,6 +597,8 @@ class _AdminOperationsScreenState extends State<AdminOperationsScreen> {
                               ),
                               if (doc['expires_at'] != null)
                                 Text('Expires: ' + doc['expires_at'].toString()),
+                              if (doc['preview_error'] != null)
+                                Text('Preview link issue: ${doc['preview_error']}', style: TextStyle(color: Theme.of(context).colorScheme.error)),
                               if (doc['review_note'] != null && doc['review_note'].toString().isNotEmpty)
                                 Text('Review note: ' + doc['review_note'].toString()),
                               Wrap(
@@ -558,6 +673,40 @@ class _AdminOperationsScreenState extends State<AdminOperationsScreen> {
                     ],
                   ),
                 );
+              }),
+            const SizedBox(height: 24),
+            Text('Registered drivers', style: Theme.of(context).textTheme.titleLarge),
+            const Text('Approved, suspended and rejected driver accounts. Edit vehicle details, suspend access or remove eligible accounts.'),
+            if (_registeredDrivers.isEmpty)
+              const ListTile(title: Text('No approved or previously reviewed drivers yet.'))
+            else
+              ..._registeredDrivers.map((driver) {
+                final id = driver['user_id'].toString();
+                final shortId = id.substring(0, id.length < 8 ? id.length : 8);
+                final profile = driver['profile'] as Map<String, dynamic>? ?? {};
+                final status = driver['verification_status'].toString();
+                final name = profile['full_name']?.toString().trim();
+                return Card(child: ListTile(
+                  leading: CircleAvatar(child: const Icon(Icons.person_outline)),
+                  title: Text(name == null || name.isEmpty ? 'Driver $shortId' : name),
+                  subtitle: Text('${driver['vehicle_registration'] ?? 'Vehicle details unavailable'} · ${status.replaceAll('_', ' ')} · ${profile['phone_e164'] ?? 'No phone'}'),
+                  isThreeLine: true,
+                  trailing: PopupMenuButton<String>(
+                    enabled: !_busy,
+                    onSelected: (value) {
+                      if (value == 'edit') _editDriver(driver);
+                      if (value == 'suspend') _setDriverStatus(id, 'suspended');
+                      if (value == 'activate') _setDriverStatus(id, 'approved');
+                      if (value == 'delete') _deleteDriver(id);
+                    },
+                    itemBuilder: (_) => [
+                      const PopupMenuItem(value: 'edit', child: Text('Edit vehicle details')),
+                      if (status == 'approved') const PopupMenuItem(value: 'suspend', child: Text('Suspend driver')),
+                      if (status == 'suspended') const PopupMenuItem(value: 'activate', child: Text('Reactivate driver')),
+                      const PopupMenuItem(value: 'delete', child: Text('Delete driver account')),
+                    ],
+                  ),
+                ));
               }),
             const SizedBox(height: 24),
             Text('Pending service-pincode approvals', style: Theme.of(context).textTheme.titleLarge),
@@ -688,6 +837,13 @@ class _AdminOperationsScreenState extends State<AdminOperationsScreen> {
                               child: Chip(label: Text(status.replaceAll('_', ' '))),
                             ),
                             Text(ticket['description'].toString()),
+                            if ((ticket['admin_response']?.toString() ?? '').isNotEmpty) ...[
+                              const SizedBox(height: 10),
+                              const Text('Latest admin response', style: TextStyle(fontWeight: FontWeight.w700)),
+                              Text(ticket['admin_response'].toString()),
+                              if (ticket['admin_responded_at'] != null)
+                                Text('Sent: ${ticket['admin_responded_at']}'),
+                            ],
                             if (ride != null) ...[
                               const SizedBox(height: 8),
                               Text('Ride status: ' + (ride['status']?.toString() ?? 'unknown').replaceAll('_', ' ')),
@@ -696,6 +852,32 @@ class _AdminOperationsScreenState extends State<AdminOperationsScreen> {
                             ] else
                               const Text('General support request (not linked to a ride).'),
                             const SizedBox(height: 12),
+                            TextField(
+                              controller: _supportReplyControllers.putIfAbsent(id, () => TextEditingController()),
+                              minLines: 2,
+                              maxLines: 5,
+                              decoration: const InputDecoration(
+                                labelText: 'Reply to customer',
+                                hintText: 'Write a clear update or resolution…',
+                                border: OutlineInputBorder(),
+                              ),
+                            ),
+                            const SizedBox(height: 8),
+                            Align(
+                              alignment: Alignment.centerRight,
+                              child: FilledButton.icon(
+                                onPressed: _busy ? null : () {
+                                  final reply = _supportReplyControllers[id]?.text.trim() ?? '';
+                                  if (reply.length < 2) {
+                                    setState(() => _error = 'Write a reply before sending.');
+                                    return;
+                                  }
+                                  _updateSupportTicket(id, status == 'open' ? 'in_progress' : status, responseText: reply);
+                                },
+                                icon: const Icon(Icons.send),
+                                label: const Text('Send reply'),
+                              ),
+                            ),
                             DropdownButtonFormField<String>(
                               initialValue: status,
                               decoration: const InputDecoration(labelText: 'Update ticket status'),
