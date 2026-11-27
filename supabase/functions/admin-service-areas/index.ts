@@ -619,16 +619,128 @@ Deno.serve(async (req: Request) => {
         .select("user_id,verification_status,availability_status,vehicle_category_id,vehicle_registration,vehicle_make,vehicle_model,vehicle_color,created_at,updated_at,vehicle_categories(id,code,name),driver_documents(id,document_type,verification_status,document_number_last4,issued_at,expires_at,review_note,reviewed_at,created_at,storage_bucket,object_path),driver_service_pincodes(id,pincode_id,status,is_primary,requested_at,service_area_pincodes(pincode,label))")
         .order("created_at", { ascending: false });
       if (error) return fail(500, "Unable to load driver applications");
+      const userIds = (data ?? []).map((item) => String(item.user_id));
+      const { data: profiles, error: profilesError } = userIds.length
+        ? await admin.from("profiles").select("id,full_name,phone_e164,avatar_url,account_status").in("id", userIds)
+        : { data: [], error: null };
+      if (profilesError) return fail(500, "Unable to load driver account details");
+      const profileMap = new Map((profiles ?? []).map((profile) => [String(profile.id), profile]));
       const applications = await Promise.all((data ?? []).map(async (item) => {
         const documents = await Promise.all((item.driver_documents ?? []).map(async (document) => {
+          const bucket = String(document.storage_bucket ?? "driver-documents");
+          const objectPath = String(document.object_path ?? "");
+          if (!objectPath) return { ...document, signed_url: null, preview_error: "Document storage path is missing" };
           const { data: signed, error: signedError } = await admin.storage
-            .from(String(document.storage_bucket ?? "driver-documents"))
-            .createSignedUrl(String(document.object_path), 600);
-          return { ...document, signed_url: signedError ? null : signed?.signedUrl ?? null };
+            .from(bucket)
+            .createSignedUrl(objectPath, 900);
+          if (signedError) console.error("Driver document signed URL failed", {
+            document_id: document.id,
+            bucket,
+            error: signedError.message,
+          });
+          return {
+            ...document,
+            signed_url: signedError ? null : signed?.signedUrl ?? null,
+            preview_error: signedError?.message ?? null,
+          };
         }));
-        return { ...item, driver_documents: documents };
+        return { ...item, profile: profileMap.get(String(item.user_id)) ?? null, driver_documents: documents };
       }));
       return response(200, { applications });
+    }
+
+    if (action === "update_driver_profile") {
+      const driverId = String(body.driverId ?? "");
+      if (!/^[0-9a-f-]{36}$/i.test(driverId)) return fail(400, "A valid driver ID is required");
+      const updates: Record<string, unknown> = {};
+      for (const key of ["vehicle_make", "vehicle_model", "vehicle_color", "vehicle_registration"] as const) {
+        if (body[key] !== undefined) {
+          const value = String(body[key] ?? "").trim();
+          if (value.length > 80) return fail(400, "Driver vehicle fields must be 80 characters or fewer");
+          updates[key] = value || null;
+        }
+      }
+      if (body.vehicleCategoryId !== undefined) {
+        const categoryId = body.vehicleCategoryId == null ? null : Number(body.vehicleCategoryId);
+        if (categoryId !== null && !Number.isSafeInteger(categoryId)) return fail(400, "Invalid vehicle category");
+        updates.vehicle_category_id = categoryId;
+      }
+      if (!Object.keys(updates).length) return fail(400, "No driver profile changes were supplied");
+      const { data: before, error: readError } = await admin.from("driver_profiles")
+        .select("*").eq("user_id", driverId).maybeSingle();
+      if (readError || !before) return fail(404, "Driver account not found");
+      const { data, error } = await admin.from("driver_profiles")
+        .update(updates).eq("user_id", driverId)
+        .select("user_id,verification_status,availability_status,vehicle_category_id,vehicle_registration,vehicle_make,vehicle_model,vehicle_color,updated_at")
+        .single();
+      if (error) return fail(400, "Unable to update driver profile");
+      await audit("driver_profile.updated", "driver_profiles", driverId, before, data);
+      return response(200, { driver: data });
+    }
+
+    if (action === "set_driver_verification_status") {
+      const driverId = String(body.driverId ?? "");
+      const status = body.status;
+      if (!/^[0-9a-f-]{36}$/i.test(driverId) || !["approved", "suspended"].includes(String(status))) {
+        return fail(400, "A valid driver ID and approved/suspended status are required");
+      }
+      const { data: before, error: readError } = await admin.from("driver_profiles")
+        .select("user_id,verification_status,availability_status").eq("user_id", driverId).maybeSingle();
+      if (readError || !before) return fail(404, "Driver account not found");
+      if (status === "approved") {
+        const { data: documents, error: documentsError } = await admin.from("driver_documents")
+          .select("document_type,verification_status,expires_at").eq("driver_id", driverId);
+        if (documentsError) return fail(500, "Unable to verify driver documents");
+        const required = ["driving_license", "vehicle_rc", "insurance"];
+        const ready = required.every((type) => (documents ?? []).some((doc) =>
+          doc.document_type === type && doc.verification_status === "approved" &&
+          (!doc.expires_at || Date.parse(String(doc.expires_at)) >= Date.now())
+        ));
+        if (!ready) return fail(409, "All three required documents must be approved and unexpired before activating this driver");
+      }
+      const { data, error } = await admin.from("driver_profiles")
+        .update({
+          verification_status: status,
+          availability_status: status === "suspended" ? "offline" : "offline",
+        }).eq("user_id", driverId)
+        .select("user_id,verification_status,availability_status").single();
+      if (error) return fail(400, "Unable to change driver approval status");
+      const { error: profileError } = await admin.from("profiles")
+        .update({ account_status: status === "suspended" ? "suspended" : "active" }).eq("id", driverId);
+      if (profileError) return fail(500, "Driver status changed but account access status could not be synchronized");
+      await audit("driver_status." + status, "driver_profiles", driverId, before, data);
+      return response(200, { driver: data });
+    }
+
+    if (action === "delete_driver_account") {
+      const driverId = String(body.driverId ?? "");
+      if (!/^[0-9a-f-]{36}$/i.test(driverId)) return fail(400, "A valid driver ID is required");
+      const [{ data: driver, error: driverError }, { count: rideCount, error: ridesError }, { count: ticketCount, error: ticketsError }] = await Promise.all([
+        admin.from("driver_profiles").select("user_id,verification_status,vehicle_registration").eq("user_id", driverId).maybeSingle(),
+        admin.from("rides").select("id", { count: "exact", head: true }).eq("driver_id", driverId),
+        admin.from("ride_support_tickets").select("id", { count: "exact", head: true }).eq("submitted_by", driverId),
+      ]);
+      if (driverError || ridesError || ticketsError) return fail(500, "Unable to check driver history before deletion");
+      if (!driver) return fail(404, "Driver account not found");
+      if ((rideCount ?? 0) > 0 || (ticketCount ?? 0) > 0) {
+        return fail(409, "This driver has ride or support history. Suspend the account instead to preserve required records.");
+      }
+      const { data: docs, error: docsError } = await admin.from("driver_documents")
+        .select("storage_bucket,object_path").eq("driver_id", driverId);
+      if (docsError) return fail(500, "Unable to load driver document records");
+      const buckets = new Map<string, string[]>();
+      for (const doc of docs ?? []) {
+        const bucket = String(doc.storage_bucket ?? "driver-documents");
+        buckets.set(bucket, [...(buckets.get(bucket) ?? []), String(doc.object_path)]);
+      }
+      for (const [bucket, paths] of buckets) {
+        const { error } = await admin.storage.from(bucket).remove(paths);
+        if (error) return fail(500, "Unable to securely remove driver verification files");
+      }
+      const { error: deleteError } = await admin.auth.admin.deleteUser(driverId);
+      if (deleteError) return fail(400, "Unable to delete driver account");
+      await audit("driver_account.deleted", "driver_profiles", driverId, driver, null);
+      return response(200, { deleted: true });
     }
 
     if (action === "review_driver_document") {
