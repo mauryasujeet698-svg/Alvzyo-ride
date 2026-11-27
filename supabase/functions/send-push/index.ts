@@ -80,82 +80,142 @@ async function signWorkloadAssertion(privateJwkJson: string, audience: string): 
   return unsigned + "." + base64Url(signature);
 }
 
-async function googleAccessToken(): Promise<string> {
-  const nowMs = Date.now();
-  const now = Math.floor(nowMs / 1000);
-  const cachedToken = cachedAccessToken;
-  if (cachedToken && cachedAccessTokenExpiresAt > now + 60) {
-    return cachedToken;
-  }
+function pemBytes(pem: string): Uint8Array {
+  const body = pem.replace(/-----BEGIN PRIVATE KEY-----|-----END PRIVATE KEY-----|\\s/g, "");
+  const binary = atob(body);
+  return Uint8Array.from(binary, (character) => character.charCodeAt(0));
+}
 
-  const privateJwkJson = Deno.env.get("GCP_WIF_PRIVATE_JWK");
-  if (!privateJwkJson) {
-    throw new Error("Missing GCP_WIF_PRIVATE_JWK Supabase secret.");
+async function serviceAccountAccessToken(): Promise<string> {
+  const raw = Deno.env.get("FCM_SERVICE_ACCOUNT_JSON");
+  if (!raw) throw new Error("FCM_SERVICE_ACCOUNT_JSON is not configured.");
+  const account = JSON.parse(raw) as {
+    client_email?: string;
+    private_key?: string;
+    private_key_id?: string;
+  };
+  if (!account.client_email || !account.private_key) {
+    throw new Error("FCM_SERVICE_ACCOUNT_JSON is missing client_email or private_key.");
   }
-
-  const audience = providerResource(GCP_PROJECT_NUMBER);
-  const assertion = await signWorkloadAssertion(privateJwkJson, audience);
-  const stsResponse = await fetch("https://sts.googleapis.com/v1/token", {
+  const now = Math.floor(Date.now() / 1000);
+  const tokenUrl = "https://oauth2.googleapis.com/token";
+  const header = encodeJson({
+    alg: "RS256",
+    typ: "JWT",
+    ...(account.private_key_id ? { kid: account.private_key_id } : {}),
+  });
+  const claims = encodeJson({
+    iss: account.client_email,
+    scope: "https://www.googleapis.com/auth/firebase.messaging",
+    aud: tokenUrl,
+    iat: now,
+    exp: now + 300,
+  });
+  const unsigned = header + "." + claims;
+  const key = await crypto.subtle.importKey(
+    "pkcs8",
+    pemBytes(account.private_key),
+    { name: "RSASSA-PKCS1-v1_5", hash: "SHA-256" },
+    false,
+    ["sign"],
+  );
+  const signature = new Uint8Array(await crypto.subtle.sign(
+    "RSASSA-PKCS1-v1_5",
+    key,
+    new TextEncoder().encode(unsigned),
+  ));
+  const assertion = unsigned + "." + base64Url(signature);
+  const response = await fetch(tokenUrl, {
     method: "POST",
     headers: { "Content-Type": "application/x-www-form-urlencoded" },
     body: new URLSearchParams({
-      grant_type: "urn:ietf:params:oauth:grant-type:token-exchange",
-      audience,
-      scope: "https://www.googleapis.com/auth/cloud-platform",
-      requested_token_type: "urn:ietf:params:oauth:token-type:access_token",
-      subject_token_type: "urn:ietf:params:oauth:token-type:jwt",
-      subject_token: assertion,
+      grant_type: "urn:ietf:params:oauth:grant-type:jwt-bearer",
+      assertion,
     }),
     signal: AbortSignal.timeout(12000),
   });
-
-  const stsData = await stsResponse.json().catch(() => ({}));
-  if (!stsResponse.ok || typeof stsData.access_token !== "string") {
-    const stsError = typeof stsData.error === "string" ? stsData.error : "unknown_error";
-    const description = typeof stsData.error_description === "string"
-      ? stsData.error_description.slice(0, 300)
-      : "Google did not return an error description";
-    console.error("Google STS token exchange failed", {
-      status: stsResponse.status,
-      error: stsError,
-      error_description: description,
+  const data = await response.json().catch(() => ({}));
+  if (!response.ok || typeof data.access_token !== "string") {
+    console.error("FCM service-account OAuth exchange failed", {
+      status: response.status,
+      error: data.error ?? "unknown_error",
+      description: typeof data.error_description === "string"
+        ? data.error_description.slice(0, 240)
+        : undefined,
     });
-    throw new Error("FCM_WORKLOAD_IDENTITY_EXCHANGE_FAILED: " + description);
+    throw new Error("FCM_SERVICE_ACCOUNT_OAUTH_FAILED");
+  }
+  return data.access_token;
+}
+
+async function googleAccessToken(): Promise<string> {
+  const nowMs = Date.now();
+  const now = Math.floor(nowMs / 1000);
+  if (cachedAccessToken && cachedAccessTokenExpiresAt > now + 60) {
+    return cachedAccessToken;
   }
 
-  const impersonationUrl =
-    "https://iamcredentials.googleapis.com/v1/projects/-/serviceAccounts/" +
-    encodeURIComponent(SERVICE_ACCOUNT_EMAIL) + ":generateAccessToken";
-  const impersonationResponse = await fetch(impersonationUrl, {
-    method: "POST",
-    headers: {
-      Authorization: "Bearer " + stsData.access_token,
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({
-      scope: ["https://www.googleapis.com/auth/firebase.messaging"],
-      lifetime: "3600s",
-    }),
-    signal: AbortSignal.timeout(12000),
-  });
-
-  const impersonationData = await impersonationResponse.json().catch(() => ({}));
-  if (!impersonationResponse.ok || typeof impersonationData.accessToken !== "string") {
-    console.error("Google service-account impersonation failed", {
-      status: impersonationResponse.status,
-      error: impersonationData.error?.status ?? "unknown_error",
+  try {
+    const privateJwkJson = Deno.env.get("GCP_WIF_PRIVATE_JWK");
+    if (!privateJwkJson) throw new Error("GCP_WIF_PRIVATE_JWK is not configured.");
+    const audience = providerResource(GCP_PROJECT_NUMBER);
+    const assertion = await signWorkloadAssertion(privateJwkJson, audience);
+    const stsResponse = await fetch("https://sts.googleapis.com/v1/token", {
+      method: "POST",
+      headers: { "Content-Type": "application/x-www-form-urlencoded" },
+      body: new URLSearchParams({
+        grant_type: "urn:ietf:params:oauth:grant-type:token-exchange",
+        audience,
+        scope: "https://www.googleapis.com/auth/cloud-platform",
+        requested_token_type: "urn:ietf:params:oauth:token-type:access_token",
+        subject_token_type: "urn:ietf:params:oauth:token-type:jwt",
+        subject_token: assertion,
+      }),
+      signal: AbortSignal.timeout(12000),
     });
-    throw new Error("FCM_SERVICE_ACCOUNT_IMPERSONATION_FAILED");
+    const stsData = await stsResponse.json().catch(() => ({}));
+    if (!stsResponse.ok || typeof stsData.access_token !== "string") {
+      const description = typeof stsData.error_description === "string"
+        ? stsData.error_description.slice(0, 300)
+        : String(stsData.error ?? "Google STS token exchange failed");
+      throw new Error("FCM_WORKLOAD_IDENTITY_EXCHANGE_FAILED: " + description);
+    }
+    const impersonationUrl =
+      "https://iamcredentials.googleapis.com/v1/projects/-/serviceAccounts/" +
+      encodeURIComponent(SERVICE_ACCOUNT_EMAIL) + ":generateAccessToken";
+    const impersonationResponse = await fetch(impersonationUrl, {
+      method: "POST",
+      headers: {
+        Authorization: "Bearer " + stsData.access_token,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        scope: ["https://www.googleapis.com/auth/firebase.messaging"],
+        lifetime: "3600s",
+      }),
+      signal: AbortSignal.timeout(12000),
+    });
+    const impersonationData = await impersonationResponse.json().catch(() => ({}));
+    if (!impersonationResponse.ok || typeof impersonationData.accessToken !== "string") {
+      throw new Error("FCM_SERVICE_ACCOUNT_IMPERSONATION_FAILED");
+    }
+    const expiry = typeof impersonationData.expireTime === "string"
+      ? Date.parse(impersonationData.expireTime)
+      : nowMs + 50 * 60 * 1000;
+    cachedAccessToken = impersonationData.accessToken;
+    cachedAccessTokenExpiresAt = Number.isFinite(expiry)
+      ? Math.floor(expiry / 1000)
+      : now + 50 * 60;
+    return cachedAccessToken;
+  } catch (wifError) {
+    console.error("FCM Workload Identity failed; trying configured service-account fallback", {
+      reason: wifError instanceof Error ? wifError.message.slice(0, 240) : "unknown",
+    });
+    const fallbackToken = await serviceAccountAccessToken();
+    cachedAccessToken = fallbackToken;
+    cachedAccessTokenExpiresAt = now + 50 * 60;
+    return fallbackToken;
   }
-
-  const expiry = typeof impersonationData.expireTime === "string"
-    ? Date.parse(impersonationData.expireTime)
-    : nowMs + 50 * 60 * 1000;
-  cachedAccessToken = impersonationData.accessToken;
-  cachedAccessTokenExpiresAt = Number.isFinite(expiry)
-    ? Math.floor(expiry / 1000)
-    : now + 50 * 60;
-  return impersonationData.accessToken;
 }
 
 Deno.serve(async (req: Request) => {
@@ -297,7 +357,7 @@ Deno.serve(async (req: Request) => {
           },
           body: JSON.stringify({
             message: {
-              fid: device.token,
+              token: device.token,
               notification: { title, body: messageBody },
               data,
               android: {
