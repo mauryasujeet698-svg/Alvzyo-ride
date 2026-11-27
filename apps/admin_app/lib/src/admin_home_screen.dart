@@ -403,7 +403,7 @@ class _AdminHomeScreenState extends State<AdminHomeScreen> {
         'pincode': pin.text.trim(),
       });
       final pincode = Map<String, dynamic>.from(created['pincode'] as Map);
-      final pincodeId = pincode['id'] as int;
+      final pincodeId = (pincode['id'] as num).toInt();
       final config = <String, dynamic>{
         'pincodeId': pincodeId,
         'businessModel': model,
