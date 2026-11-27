@@ -705,13 +705,7 @@ class _AdminHomeScreenState extends State<AdminHomeScreen> {
       appBar: AppBar(
         title: const Text('Service areas & fares'),
         actions: [
-          IconButton(
-            onPressed: () => context.push('/notifications'),
-            icon: const Icon(Icons.notifications_active_outlined),
-            tooltip: 'Notification centre',
-          ),
           IconButton(onPressed: busy ? null : load, icon: const Icon(Icons.refresh)),
-          IconButton(onPressed: () => context.push('/operations'), icon: const Icon(Icons.dashboard_outlined), tooltip: 'Operations'),
           IconButton(onPressed: QuickRideAuth.signOut, icon: const Icon(Icons.logout)),
         ],
       ),
@@ -900,7 +894,7 @@ class _AdminHomeScreenState extends State<AdminHomeScreen> {
                   value: active,
                   title: Text(area['name'].toString() + ' · ' + area['city'].toString()),
                   subtitle: Text(area['state'].toString()),
-                  onChanged: busy ? null : (value) => activateArea(area['id'] as int, value),
+                  onChanged: busy ? null : (value) => activateArea((area['id'] as num).toInt(), value),
                 );
               }),
               DropdownButtonFormField<String>(
@@ -1008,7 +1002,7 @@ class _AdminHomeScreenState extends State<AdminHomeScreen> {
                             value: pincode['is_active'] == true,
                             title: Text(pincode['pincode'].toString()),
                             subtitle: Text(modelName + ' · ' + radiusLabel),
-                            onChanged: busy ? null : (value) => setPincodeActive(pincode['id'] as int, value),
+                            onChanged: busy ? null : (value) => setPincodeActive((pincode['id'] as num).toInt(), value),
                           ),
                           Padding(
                             padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
